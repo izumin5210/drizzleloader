@@ -235,3 +235,79 @@ export function generateInternalFile(options: InternalFileOptions): string {
 
   return lines.join("\n");
 }
+
+export interface TableFileOptions {
+  schemaImport: string;
+  internalImport: string;
+}
+
+export function generateTableFile(
+  table: AnalyzedTable,
+  options: TableFileOptions,
+): string {
+  const tableName = toPascalCase(table.name);
+  const rowType = `${tableName}Row`;
+
+  const imports = `import DataLoader from "dataloader";
+import { inArray } from "drizzle-orm";
+import type { InferSelectModel } from "drizzle-orm";
+import * as __schema from "${options.schemaImport}";
+import {
+  type DrizzleDb,
+  DrizzleLoaderNotFound,
+  buildLookupMap,
+  lookupOrError,
+} from "${options.internalImport}";`;
+
+  const typeAlias = `type ${rowType} = InferSelectModel<typeof __schema.${table.name}>;`;
+
+  const loaderFn = generateTableLoaderFunctionExported(table);
+
+  return `${imports}
+
+${typeAlias}
+
+${loaderFn}
+`;
+}
+
+function generateTableLoaderFunctionExported(table: AnalyzedTable): string {
+  const tablePascal = toPascalCase(table.name);
+  const lines: string[] = [];
+
+  lines.push(`export function create${tablePascal}Loaders(db: DrizzleDb) {`);
+
+  const loaders: string[] = [];
+
+  if (table.primaryKey) {
+    loaders.push(
+      generateUniqueLoader(
+        table,
+        table.primaryKey.column.name,
+        table.primaryKey.column.tsType,
+      ),
+    );
+  }
+
+  for (const idx of table.indexes) {
+    if (idx.unique) {
+      loaders.push(
+        generateUniqueLoader(table, idx.column.name, idx.column.tsType),
+      );
+    } else {
+      loaders.push(
+        generateNonUniqueLoader(table, idx.column.name, idx.column.tsType),
+      );
+    }
+  }
+
+  for (const loader of loaders) {
+    lines.push(indentLines(loader, 2));
+  }
+
+  const loaderNames = getLoaderNames(table);
+  lines.push(`  return { ${loaderNames.join(", ")} };`);
+  lines.push("}");
+
+  return lines.join("\n");
+}

@@ -10,6 +10,7 @@ import {
   generateHelperFunctions,
   generateInternalFile,
   generateLoaderCode,
+  generateTableFile,
 } from "./code-generator.js";
 
 describe("generateLoaderCode", () => {
@@ -92,5 +93,22 @@ describe("generateInternalFile", () => {
     expect(code).toContain("export class DrizzleLoaderNotFound");
     expect(code).toContain("export function buildLookupMap");
     expect(code).toContain("export function lookupOrError");
+  });
+});
+
+describe("generateTableFile", () => {
+  it("generates table loader file with imports from _internal", () => {
+    const table = analyzeTable(basicPkSchema.users);
+    const code = generateTableFile(table, {
+      schemaImport: "../../schema.js",
+      internalImport: "./_internal.js",
+    });
+    expect(code).toContain("type DrizzleDb,");
+    expect(code).toContain("DrizzleLoaderNotFound,");
+    expect(code).toContain("buildLookupMap,");
+    expect(code).toContain("lookupOrError,");
+    expect(code).toContain('} from "./_internal.js"');
+    expect(code).toContain('import * as __schema from "../../schema.js"');
+    expect(code).toContain("export function createUsersLoaders");
   });
 });
