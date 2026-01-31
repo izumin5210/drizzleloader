@@ -12,25 +12,25 @@ import * as multipleTablesSchema from "../golden/multiple-tables/schema.js";
 describe("generateLoaderCode", () => {
   it("generates loader for basic primary key", async () => {
     const tables = [analyzeTable(basicPkSchema.users)];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema" });
+    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
     await expect(code).toMatchFileSnapshot("../golden/basic-pk/loaders.ts");
   });
 
   it("generates loader for uuid primary key", async () => {
     const tables = [analyzeTable(uuidPkSchema.items)];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema" });
+    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
     await expect(code).toMatchFileSnapshot("../golden/uuid-pk/loaders.ts");
   });
 
   it("generates loader for unique index", async () => {
     const tables = [analyzeTable(uniqueIndexSchema.users)];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema" });
+    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
     await expect(code).toMatchFileSnapshot("../golden/unique-index/loaders.ts");
   });
 
   it("generates loader for non-unique index", async () => {
     const tables = [analyzeTable(nonUniqueIndexSchema.posts)];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema" });
+    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
     await expect(code).toMatchFileSnapshot(
       "../golden/non-unique-index/loaders.ts"
     );
@@ -38,7 +38,7 @@ describe("generateLoaderCode", () => {
 
   it("generates loaders for multiple indexes", async () => {
     const tables = [analyzeTable(multipleIndexesSchema.posts)];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema" });
+    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
     await expect(code).toMatchFileSnapshot(
       "../golden/multiple-indexes/loaders.ts"
     );
@@ -49,7 +49,7 @@ describe("generateLoaderCode", () => {
       analyzeTable(multipleTablesSchema.users),
       analyzeTable(multipleTablesSchema.posts),
     ];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema" });
+    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
     await expect(code).toMatchFileSnapshot(
       "../golden/multiple-tables/loaders.ts"
     );

@@ -85,4 +85,5 @@ export const users = pgTable("users", {
 
     expect(output).toContain('import * as __schema from "../db/schema.js"');
   });
+
 });

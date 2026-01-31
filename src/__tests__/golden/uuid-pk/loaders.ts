@@ -2,7 +2,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { inArray } from "drizzle-orm";
 import DataLoader from "dataloader";
-import * as __schema from "./schema";
+import * as __schema from "./schema.js";
 import { DrizzleLoaderNotFound } from "drizzleloader/runtime";
 
 type DrizzleDb = PgDatabase<PgQueryResultHKT, typeof __schema>;

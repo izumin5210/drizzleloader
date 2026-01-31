@@ -1,13 +1,17 @@
 #!/usr/bin/env node
-import { program } from "commander";
 import { writeFileSync } from "node:fs";
-import { resolve, relative, dirname } from "node:path";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { program } from "commander";
 import type { Table } from "drizzle-orm";
 import { is } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { analyzeTable } from "./analyzer/table-analyzer.js";
 import { generateLoaderCode } from "./generator/code-generator.js";
+import {
+  computeSchemaImport,
+  type ImportExtension,
+} from "./utils/import-path.js";
 
 async function loadSchema(schemaPath: string): Promise<Table[]> {
   const absolutePath = resolve(process.cwd(), schemaPath);
@@ -24,24 +28,10 @@ async function loadSchema(schemaPath: string): Promise<Table[]> {
   return tables;
 }
 
-function computeSchemaImport(schemaPath: string, outputPath: string): string {
-  const schemaAbs = resolve(process.cwd(), schemaPath);
-  const outputAbs = resolve(process.cwd(), outputPath);
-  const outputDir = dirname(outputAbs);
-
-  let relativePath = relative(outputDir, schemaAbs);
-  if (!relativePath.startsWith(".")) {
-    relativePath = "./" + relativePath;
-  }
-
-  relativePath = relativePath.replace(/\.ts$/, ".js");
-
-  return relativePath;
-}
-
 interface GenerateOptions {
   schema: string;
   output: string;
+  importExtension: ImportExtension;
 }
 
 async function generate(options: GenerateOptions): Promise<void> {
@@ -53,13 +43,19 @@ async function generate(options: GenerateOptions): Promise<void> {
   }
 
   const analyzedTables = tables.map((table) => analyzeTable(table));
-  const schemaImport = computeSchemaImport(options.schema, options.output);
+  const schemaImport = computeSchemaImport(
+    options.schema,
+    options.output,
+    options.importExtension,
+  );
   const code = generateLoaderCode(analyzedTables, { schemaImport });
 
   const outputPath = resolve(process.cwd(), options.output);
   writeFileSync(outputPath, code);
 
-  console.log(`Generated loaders for ${tables.length} table(s) at ${options.output}`);
+  console.log(
+    `Generated loaders for ${tables.length} table(s) at ${options.output}`,
+  );
 }
 
 program
@@ -72,7 +68,21 @@ program
   .description("Generate DataLoader code from schema")
   .requiredOption("-s, --schema <path>", "Path to the Drizzle schema file")
   .requiredOption("-o, --output <path>", "Path to the output file")
+  .option(
+    "-e, --import-extension <ext>",
+    "Extension for schema import (.js or none)",
+    ".js",
+  )
   .action(async (options: GenerateOptions) => {
+    if (
+      options.importExtension !== ".js" &&
+      options.importExtension !== "none"
+    ) {
+      console.error(
+        `Invalid import extension: ${options.importExtension}. Must be ".js" or "none".`,
+      );
+      process.exit(1);
+    }
     await generate(options);
   });
 
