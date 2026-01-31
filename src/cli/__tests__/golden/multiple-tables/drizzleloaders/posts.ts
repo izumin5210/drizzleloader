@@ -1,0 +1,33 @@
+import DataLoader from "dataloader";
+import { inArray } from "drizzle-orm";
+import type { InferSelectModel } from "drizzle-orm";
+import {
+  DrizzleLoaderNotFound,
+  buildLookupMap,
+  lookupOrError,
+} from "drizzleloader";
+import * as __schema from "../schema.js";
+import { type DrizzleDb } from "./_internal.js";
+
+export function createPostsLoaders(db: DrizzleDb) {
+  const byId = new DataLoader<number, InferSelectModel<typeof __schema.posts>>(
+    async (ids) => {
+      const rows = await db.select().from(__schema.posts).where(inArray(__schema.posts.id, [...ids]));
+      const map = buildLookupMap(rows, (row) => row.id);
+      return ids.map((key) => lookupOrError(map, key, "posts", "id"));
+    }
+  );
+  const byAuthorId = new DataLoader<number, InferSelectModel<typeof __schema.posts>[]>(
+    async (authorIds) => {
+      const rows = await db.select().from(__schema.posts).where(inArray(__schema.posts.authorId, [...authorIds]));
+      const map = new Map<number, InferSelectModel<typeof __schema.posts>[]>();
+      for (const row of rows) {
+        const existing = map.get(row.authorId) ?? [];
+        existing.push(row);
+        map.set(row.authorId, existing);
+      }
+      return authorIds.map((key) => map.get(key) ?? []);
+    }
+  );
+  return { byId, byAuthorId };
+}
