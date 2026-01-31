@@ -39,3 +39,27 @@ export function lookupOrError<K, V>(
     map.get(key) ?? new DrizzleLoaderNotFound({ table, columns: [{ [column]: key }] })
   );
 }
+
+export function serializeCompositeKey<T extends Record<string, unknown>>(
+  key: T,
+  keyColumns: (keyof T)[]
+): string {
+  return keyColumns.map((col) => String(key[col])).join("\0");
+}
+
+export function buildCompositeLookupMap<
+  TKey extends Record<string, unknown>,
+  TRow extends Record<string, unknown>
+>(
+  rows: TRow[],
+  keyColumns: (keyof TKey)[]
+): Map<string, TRow[]> {
+  const map = new Map<string, TRow[]>();
+  for (const row of rows) {
+    const keyStr = keyColumns.map((col) => String(row[col as string])).join("\0");
+    const existing = map.get(keyStr) ?? [];
+    existing.push(row);
+    map.set(keyStr, existing);
+  }
+  return map;
+}
