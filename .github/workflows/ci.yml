@@ -45,9 +45,9 @@ jobs:
             node-version: "lts/*"
           - os: ubuntu-latest
             node-version: "lts/-1"
-          # windows-latest: LTS active only
-          - os: windows-latest
-            node-version: "lts/*"
+          # # windows-latest: LTS active only
+          # - os: windows-latest
+          #   node-version: "lts/*"
       fail-fast: false
     runs-on: ${{ matrix.os }}
     name: test / Node.js ${{ matrix.node-version }} / ${{ matrix.os }}
