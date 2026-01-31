@@ -34,46 +34,99 @@ describe("generateLoaderCode", () => {
     );
   });
 
-  it("generates loader for uuid primary key", async () => {
+  it("generates loader files for uuid primary key", async () => {
     const tables = [analyzeTable(uuidPkSchema.items)];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
-    await expect(code).toMatchFileSnapshot(
-      "../__tests__/golden/uuid-pk/loaders.ts",
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    await expect(files.get("drizzleloaders.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/uuid-pk/drizzleloaders.ts",
+    );
+    await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/uuid-pk/drizzleloaders/_internal.ts",
+    );
+    await expect(files.get("drizzleloaders/items.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/uuid-pk/drizzleloaders/items.ts",
     );
   });
 
-  it("generates loader for unique index", async () => {
+  it("generates loader files for unique index", async () => {
     const tables = [analyzeTable(uniqueIndexSchema.users)];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
-    await expect(code).toMatchFileSnapshot(
-      "../__tests__/golden/unique-index/loaders.ts",
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    await expect(files.get("drizzleloaders.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/unique-index/drizzleloaders.ts",
+    );
+    await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/unique-index/drizzleloaders/_internal.ts",
+    );
+    await expect(files.get("drizzleloaders/users.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/unique-index/drizzleloaders/users.ts",
     );
   });
 
-  it("generates loader for non-unique index", async () => {
+  it("generates loader files for non-unique index", async () => {
     const tables = [analyzeTable(nonUniqueIndexSchema.posts)];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
-    await expect(code).toMatchFileSnapshot(
-      "../__tests__/golden/non-unique-index/loaders.ts",
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    await expect(files.get("drizzleloaders.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/non-unique-index/drizzleloaders.ts",
+    );
+    await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/non-unique-index/drizzleloaders/_internal.ts",
+    );
+    await expect(files.get("drizzleloaders/posts.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/non-unique-index/drizzleloaders/posts.ts",
     );
   });
 
-  it("generates loaders for multiple indexes", async () => {
+  it("generates loader files for multiple indexes", async () => {
     const tables = [analyzeTable(multipleIndexesSchema.posts)];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
-    await expect(code).toMatchFileSnapshot(
-      "../__tests__/golden/multiple-indexes/loaders.ts",
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    await expect(files.get("drizzleloaders.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/multiple-indexes/drizzleloaders.ts",
+    );
+    await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/multiple-indexes/drizzleloaders/_internal.ts",
+    );
+    await expect(files.get("drizzleloaders/posts.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/multiple-indexes/drizzleloaders/posts.ts",
     );
   });
 
-  it("generates loaders for multiple tables", async () => {
+  it("generates loader files for multiple tables", async () => {
     const tables = [
       analyzeTable(multipleTablesSchema.users),
       analyzeTable(multipleTablesSchema.posts),
     ];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
-    await expect(code).toMatchFileSnapshot(
-      "../__tests__/golden/multiple-tables/loaders.ts",
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    await expect(files.get("drizzleloaders.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/multiple-tables/drizzleloaders.ts",
+    );
+    await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/multiple-tables/drizzleloaders/_internal.ts",
+    );
+    await expect(files.get("drizzleloaders/users.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/multiple-tables/drizzleloaders/users.ts",
+    );
+    await expect(files.get("drizzleloaders/posts.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/multiple-tables/drizzleloaders/posts.ts",
     );
   });
 });
