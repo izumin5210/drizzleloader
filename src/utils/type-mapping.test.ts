@@ -17,7 +17,7 @@ import {
   jsonb,
   getTableConfig,
 } from "drizzle-orm/pg-core";
-import { mapColumnToTsType } from "../../utils/type-mapping.js";
+import { mapColumnToTsType } from "./type-mapping.js";
 
 function createTableWithColumn<T>(
   columnName: string,

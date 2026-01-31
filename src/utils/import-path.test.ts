@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeSchemaImport } from "../../utils/import-path.js";
+import { computeSchemaImport } from "./import-path.js";
 
 describe("computeSchemaImport", () => {
   it("returns relative path with .js extension by default", () => {

@@ -11,7 +11,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { analyzeTable } from "../../analyzer/table-analyzer.js";
+import { analyzeTable } from "./table-analyzer.js";
 
 describe("analyzeTable", () => {
   describe("primary key detection", () => {
