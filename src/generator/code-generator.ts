@@ -311,3 +311,60 @@ function generateTableLoaderFunctionExported(table: AnalyzedTable): string {
 
   return lines.join("\n");
 }
+
+export interface EntryPointFileOptions {
+  schemaImport: string;
+  internalImport: string;
+  tableImportPrefix: string;
+  importExtension: string;
+}
+
+export function generateEntryPointFile(
+  tables: AnalyzedTable[],
+  options: EntryPointFileOptions,
+): string {
+  const ext = options.importExtension;
+
+  // Generate imports for each table's loader function
+  const tableImports = tables
+    .map((t) => {
+      const fnName = `create${toPascalCase(t.name)}Loaders`;
+      const fileName = toCamelCase(t.name);
+      return `import { ${fnName} } from "${options.tableImportPrefix}${fileName}${ext}";`;
+    })
+    .join("\n");
+
+  // Import DrizzleDb type from _internal
+  const typeImport = `import { type DrizzleDb } from "${options.internalImport}";`;
+
+  // Re-export DrizzleLoaderNotFound from _internal
+  const reExport = `export { DrizzleLoaderNotFound } from "${options.internalImport}";`;
+
+  // Generate factory function that combines all table loaders
+  const factoryFn = generateEntryPointFactory(tables);
+
+  return `${tableImports}
+${typeImport}
+
+${reExport}
+
+${factoryFn}
+`;
+}
+
+function generateEntryPointFactory(tables: AnalyzedTable[]): string {
+  const lines: string[] = [];
+
+  lines.push("export function createDrizzleLoaders(db: DrizzleDb) {");
+  lines.push("  return {");
+
+  for (const table of tables) {
+    const tablePascal = toPascalCase(table.name);
+    lines.push(`    ${table.name}: create${tablePascal}Loaders(db),`);
+  }
+
+  lines.push("  };");
+  lines.push("}");
+
+  return lines.join("\n");
+}

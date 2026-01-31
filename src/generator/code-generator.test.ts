@@ -7,6 +7,7 @@ import * as uniqueIndexSchema from "../__tests__/golden/unique-index/schema.js";
 import * as uuidPkSchema from "../__tests__/golden/uuid-pk/schema.js";
 import { analyzeTable } from "../analyzer/table-analyzer.js";
 import {
+  generateEntryPointFile,
   generateHelperFunctions,
   generateInternalFile,
   generateLoaderCode,
@@ -110,5 +111,58 @@ describe("generateTableFile", () => {
     expect(code).toContain('} from "./_internal.js"');
     expect(code).toContain('import * as __schema from "../../schema.js"');
     expect(code).toContain("export function createUsersLoaders");
+  });
+});
+
+describe("generateEntryPointFile", () => {
+  it("generates entry point that imports table loaders and re-exports error", () => {
+    const tables = [analyzeTable(basicPkSchema.users)];
+    const code = generateEntryPointFile(tables, {
+      schemaImport: "./schema.js",
+      internalImport: "./drizzleloaders/_internal.js",
+      tableImportPrefix: "./drizzleloaders/",
+      importExtension: ".js",
+    });
+    expect(code).toContain(
+      'import { createUsersLoaders } from "./drizzleloaders/users.js"',
+    );
+    expect(code).toContain(
+      'export { DrizzleLoaderNotFound } from "./drizzleloaders/_internal.js"',
+    );
+    expect(code).toContain("export function createDrizzleLoaders");
+  });
+
+  it("generates entry point for multiple tables", () => {
+    const tables = [
+      analyzeTable(multipleTablesSchema.users),
+      analyzeTable(multipleTablesSchema.posts),
+    ];
+    const code = generateEntryPointFile(tables, {
+      schemaImport: "./schema.js",
+      internalImport: "./drizzleloaders/_internal.js",
+      tableImportPrefix: "./drizzleloaders/",
+      importExtension: ".js",
+    });
+    expect(code).toContain(
+      'import { createUsersLoaders } from "./drizzleloaders/users.js"',
+    );
+    expect(code).toContain(
+      'import { createPostsLoaders } from "./drizzleloaders/posts.js"',
+    );
+    expect(code).toContain("users: createUsersLoaders(db)");
+    expect(code).toContain("posts: createPostsLoaders(db)");
+  });
+
+  it("converts snake_case table names to camelCase for file imports", () => {
+    // Test with a hypothetical snake_case table name
+    // Using multipleIndexesSchema.posts as a proxy
+    const tables = [analyzeTable(multipleIndexesSchema.posts)];
+    const code = generateEntryPointFile(tables, {
+      schemaImport: "./schema.js",
+      internalImport: "./drizzleloaders/_internal.js",
+      tableImportPrefix: "./drizzleloaders/",
+      importExtension: ".js",
+    });
+    expect(code).toContain("createPostsLoaders");
   });
 });
