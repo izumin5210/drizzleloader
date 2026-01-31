@@ -43,11 +43,11 @@
     "dataloader": "^2.2.3",
     "drizzle-orm": "^0.45.1",
     "knip": "5.82.1",
+    "postgres": "^3.4.8",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },
-  "dependencies": {},
   "peerDependencies": {
     "dataloader": "^2.0.0",
     "drizzle-orm": ">=0.30.0"

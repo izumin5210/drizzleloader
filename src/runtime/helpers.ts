@@ -46,14 +46,20 @@ export function buildCompositeLookupMap<TRow extends Record<string, unknown>>(
 // biome-ignore lint/suspicious/noExplicitAny: drizzle-orm's schema type is too complex to express generically
 type AnyDb = PgDatabase<PgQueryResultHKT, any>;
 
-export async function queryCompositeKey<TRow>(
+type QueryBuilder = ReturnType<ReturnType<AnyDb["select"]>["from"]>;
+
+/**
+ * Builds a query for composite keys without executing it.
+ * Useful for testing with toSQL().
+ */
+export function buildCompositeQuery(
   db: AnyDb,
   table: Table,
   columns: Column[],
   keyProps: readonly string[],
   keys: readonly Record<string, unknown>[],
-): Promise<TRow[]> {
-  if (keys.length === 0) return [];
+): QueryBuilder | null {
+  if (keys.length === 0) return null;
 
   // Optimization: detect fixed columns (same value from start)
   const fixedCols: { col: Column; keyProp: string; value: unknown }[] = [];
@@ -75,29 +81,43 @@ export async function queryCompositeKey<TRow>(
   // biome-ignore lint/suspicious/noExplicitAny: drizzle-orm's query builder types are complex and don't support generic chaining
   let query: any = db.select().from(table);
 
-  // Fixed columns -> WHERE eq
-  for (const { col, value } of fixedCols) {
-    query = query.where(eq(col, value));
-  }
+  // Collect all conditions
+  const fixedConditions = fixedCols.map(({ col, value }) => eq(col, value));
 
   // Variable columns
   if (variableCols.length === 0) {
-    // All fixed - return as is
+    // All fixed - apply fixed conditions only
+    if (fixedConditions.length > 0) {
+      query = query.where(and(...fixedConditions));
+    }
   } else if (variableCols.length === 1) {
     // Single variable -> IN
     const { col, keyProp } = variableCols[0]!;
     const values = [...new Set(keys.map((k) => k[keyProp]))];
-    query = query.where(inArray(col, values as unknown[]));
+    const variableCondition = inArray(col, values as unknown[]);
+    query = query.where(and(...fixedConditions, variableCondition));
   } else {
     // Multiple variable -> OR conditions
-    const conditions = keys.map((key) => {
+    const orConditions = keys.map((key) => {
       const colConditions = variableCols.map(({ col, keyProp }) =>
         eq(col, key[keyProp]),
       );
       return and(...colConditions);
     });
-    query = query.where(or(...conditions));
+    query = query.where(and(...fixedConditions, or(...orConditions)));
   }
 
+  return query as QueryBuilder;
+}
+
+export async function queryCompositeKey<TRow>(
+  db: AnyDb,
+  table: Table,
+  columns: Column[],
+  keyProps: readonly string[],
+  keys: readonly Record<string, unknown>[],
+): Promise<TRow[]> {
+  const query = buildCompositeQuery(db, table, columns, keyProps, keys);
+  if (query === null) return [];
   return query as Promise<TRow[]>;
 }
