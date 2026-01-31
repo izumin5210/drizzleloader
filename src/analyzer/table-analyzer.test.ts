@@ -4,6 +4,7 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   serial,
   text,
   uniqueIndex,
@@ -53,6 +54,24 @@ describe("analyzeTable", () => {
       const result = analyzeTable(logs);
 
       expect(result.primaryKey).toBeNull();
+    });
+
+    it("detects composite primary key", () => {
+      const userRoles = pgTable(
+        "user_roles",
+        {
+          userId: integer("user_id").notNull(),
+          roleId: integer("role_id").notNull(),
+        },
+        (t) => [primaryKey({ columns: [t.userId, t.roleId] })],
+      );
+
+      const result = analyzeTable(userRoles);
+
+      expect(result.primaryKey).not.toBeNull();
+      expect(result.primaryKey?.columns).toHaveLength(2);
+      expect(result.primaryKey?.columns[0]?.name).toBe("user_id");
+      expect(result.primaryKey?.columns[1]?.name).toBe("role_id");
     });
   });
 
