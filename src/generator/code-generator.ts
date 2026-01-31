@@ -189,7 +189,7 @@ function generateCompositeNonUniqueLoader(
 
   return `const ${loaderName} = new DataLoader<${keyType}, InferSelectModel<typeof __schema.${tableName}>[], string>(
   async (keys) => {
-    const rows = await queryCompositeKey(db, __schema.${tableName}, [${columnAccessors}], keys as readonly Record<string, unknown>[]);
+    const rows = await queryCompositeKey(db, __schema.${tableName}, [${columnAccessors}], [${columnNames}], keys as readonly Record<string, unknown>[]);
     const map = buildCompositeLookupMap(rows, [${columnNames}] as const);
     return keys.map((key) => map.get(serializeCompositeKey(key, [${columnNames}] as const)) ?? []);
   },
@@ -217,13 +217,13 @@ function generateCompositeUniqueLoader(
     .map((c) => `__schema.${tableName}.${toCamelCase(c.name)}`)
     .join(", ");
 
-  const errorColumns = columns
-    .map((col) => `{ ${col.name}: key.${toCamelCase(col.name)} }`)
-    .join(", ");
+  const errorColumns = `{ ${columns
+    .map((col) => `${col.name}: key.${toCamelCase(col.name)}`)
+    .join(", ")} }`;
 
   return `const ${loaderName} = new DataLoader<${keyType}, InferSelectModel<typeof __schema.${tableName}>, string>(
   async (keys) => {
-    const rows = await queryCompositeKey(db, __schema.${tableName}, [${columnAccessors}], keys as readonly Record<string, unknown>[]);
+    const rows = await queryCompositeKey(db, __schema.${tableName}, [${columnAccessors}], [${columnNames}], keys as readonly Record<string, unknown>[]);
     const map = buildCompositeLookupMap(rows, [${columnNames}] as const);
     return keys.map((key) => {
       const found = map.get(serializeCompositeKey(key, [${columnNames}] as const))?.[0];
@@ -329,24 +329,25 @@ export async function queryCompositeKey<TTable extends Table>(
   db: DrizzleDb,
   table: TTable,
   columns: Column[],
+  keyProps: readonly string[],
   keys: readonly Record<string, unknown>[]
 ): Promise<InferSelectModel<TTable>[]> {
   if (keys.length === 0) return [];
 
   // Optimization: detect fixed columns (same value from start)
-  const fixedCols: { col: Column; value: unknown }[] = [];
-  const variableCols: Column[] = [];
+  const fixedCols: { col: Column; keyProp: string; value: unknown }[] = [];
+  const variableCols: { col: Column; keyProp: string }[] = [];
 
   for (let i = 0; i < columns.length; i++) {
     const col = columns[i]!;
-    const colName = col.name;
-    const firstValue = keys[0]![colName];
-    const allSame = keys.every((k) => k[colName] === firstValue);
+    const keyProp = keyProps[i]!;
+    const firstValue = keys[0]![keyProp];
+    const allSame = keys.every((k) => k[keyProp] === firstValue);
 
     if (allSame && variableCols.length === 0) {
-      fixedCols.push({ col, value: firstValue });
+      fixedCols.push({ col, keyProp, value: firstValue });
     } else {
-      variableCols.push(col);
+      variableCols.push({ col, keyProp });
     }
   }
 
@@ -362,13 +363,13 @@ export async function queryCompositeKey<TTable extends Table>(
     // All fixed - return as is
   } else if (variableCols.length === 1) {
     // Single variable -> IN
-    const col = variableCols[0]!;
-    const values = [...new Set(keys.map((k) => k[col.name]))];
+    const { col, keyProp } = variableCols[0]!;
+    const values = [...new Set(keys.map((k) => k[keyProp]))];
     query = query.where(inArray(col, values as unknown[])) as typeof query;
   } else {
     // Multiple variable -> OR conditions
     const conditions = keys.map((key) => {
-      const colConditions = variableCols.map((col) => eq(col, key[col.name]));
+      const colConditions = variableCols.map(({ col, keyProp }) => eq(col, key[keyProp]));
       return and(...colConditions);
     });
     query = query.where(or(...conditions)) as typeof query;

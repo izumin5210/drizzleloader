@@ -67,24 +67,25 @@ export async function queryCompositeKey<TTable extends Table>(
   db: DrizzleDb,
   table: TTable,
   columns: Column[],
+  keyProps: readonly string[],
   keys: readonly Record<string, unknown>[]
 ): Promise<InferSelectModel<TTable>[]> {
   if (keys.length === 0) return [];
 
   // Optimization: detect fixed columns (same value from start)
-  const fixedCols: { col: Column; value: unknown }[] = [];
-  const variableCols: Column[] = [];
+  const fixedCols: { col: Column; keyProp: string; value: unknown }[] = [];
+  const variableCols: { col: Column; keyProp: string }[] = [];
 
   for (let i = 0; i < columns.length; i++) {
     const col = columns[i]!;
-    const colName = col.name;
-    const firstValue = keys[0]![colName];
-    const allSame = keys.every((k) => k[colName] === firstValue);
+    const keyProp = keyProps[i]!;
+    const firstValue = keys[0]![keyProp];
+    const allSame = keys.every((k) => k[keyProp] === firstValue);
 
     if (allSame && variableCols.length === 0) {
-      fixedCols.push({ col, value: firstValue });
+      fixedCols.push({ col, keyProp, value: firstValue });
     } else {
-      variableCols.push(col);
+      variableCols.push({ col, keyProp });
     }
   }
 
@@ -100,13 +101,13 @@ export async function queryCompositeKey<TTable extends Table>(
     // All fixed - return as is
   } else if (variableCols.length === 1) {
     // Single variable -> IN
-    const col = variableCols[0]!;
-    const values = [...new Set(keys.map((k) => k[col.name]))];
+    const { col, keyProp } = variableCols[0]!;
+    const values = [...new Set(keys.map((k) => k[keyProp]))];
     query = query.where(inArray(col, values as unknown[])) as typeof query;
   } else {
     // Multiple variable -> OR conditions
     const conditions = keys.map((key) => {
-      const colConditions = variableCols.map((col) => eq(col, key[col.name]));
+      const colConditions = variableCols.map(({ col, keyProp }) => eq(col, key[keyProp]));
       return and(...colConditions);
     });
     query = query.where(or(...conditions)) as typeof query;

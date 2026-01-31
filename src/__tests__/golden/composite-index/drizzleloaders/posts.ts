@@ -22,7 +22,7 @@ export function createPostsLoaders(db: DrizzleDb) {
   );
   const byAuthorIdAndCategory = new DataLoader<{ authorId: number; category: string }, InferSelectModel<typeof __schema.posts>[], string>(
     async (keys) => {
-      const rows = await queryCompositeKey(db, __schema.posts, [__schema.posts.authorId, __schema.posts.category], keys as readonly Record<string, unknown>[]);
+      const rows = await queryCompositeKey(db, __schema.posts, [__schema.posts.authorId, __schema.posts.category], ["authorId", "category"], keys as readonly Record<string, unknown>[]);
       const map = buildCompositeLookupMap(rows, ["authorId", "category"] as const);
       return keys.map((key) => map.get(serializeCompositeKey(key, ["authorId", "category"] as const)) ?? []);
     },
