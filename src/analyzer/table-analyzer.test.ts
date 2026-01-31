@@ -133,7 +133,7 @@ describe("analyzeTable", () => {
       expect(externalIdx?.unique).toBe(true);
     });
 
-    it("skips composite indexes", () => {
+    it("detects composite indexes", () => {
       const posts = pgTable(
         "posts",
         {
@@ -146,7 +146,8 @@ describe("analyzeTable", () => {
 
       const result = analyzeTable(posts);
 
-      expect(result.indexes).toHaveLength(0);
+      expect(result.indexes).toHaveLength(1);
+      expect(result.indexes[0]?.columns).toHaveLength(2);
     });
 
     it("detects composite index with multiple columns", () => {
