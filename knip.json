@@ -5,6 +5,6 @@
     "type": true
   },
   "tags": ["-lintignore"],
-  "ignoreFiles": ["src/__tests__/golden/**"],
+  "ignoreFiles": ["src/cli/__tests__/golden/**"],
   "ignoreDependencies": ["dataloader", "tsx"]
 }
