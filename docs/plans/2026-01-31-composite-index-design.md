@@ -295,3 +295,30 @@ new DrizzleLoaderNotFound({
 - Optimization logic centralized in `_internal.ts` to keep generated code simple
 - Helper functions run at runtime, ensuring type safety
 - `cacheKeyFn` required for DataLoader with object keys
+
+### Implementation Note: OR vs INNER JOIN
+
+設計では複数の可変カラムに対して `VALUES ... INNER JOIN` を提案していたが、実装では `OR` 条件を採用した。
+
+**設計案 (INNER JOIN)**:
+```sql
+SELECT posts.* FROM posts
+INNER JOIN (VALUES (10, 'tech'), (20, 'news')) AS _keys(author_id, category)
+ON posts.author_id = _keys.author_id AND posts.category = _keys.category
+```
+
+**実装 (OR)**:
+```sql
+SELECT ... FROM "posts" WHERE (("author_id" = $1 AND "category" = $2)
+  OR ("author_id" = $3 AND "category" = $4))
+```
+
+**採用理由**:
+1. Drizzle ORM の標準 API（`eq`, `or`, `and`）で簡潔に実装できる
+2. `VALUES ... AS _keys(...)` を Drizzle で組み立てるには raw SQL か複雑な型操作が必要
+3. DataLoader のバッチサイズは通常 100〜数百程度であり、このスケールでは OR で十分効率的
+4. PostgreSQL のプランナーは OR 条件を効率的に最適化する
+
+**トレードオフ**:
+- INNER JOIN はキー数が数千以上の場合に有利になる可能性がある
+- 現時点ではそのようなユースケースは想定していないため、実装のシンプルさを優先した
