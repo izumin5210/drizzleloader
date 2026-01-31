@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as basicPkSchema from "../__tests__/golden/basic-pk/schema.js";
+import * as compositeIndexSchema from "../__tests__/golden/composite-index/schema.js";
 import * as multipleIndexesSchema from "../__tests__/golden/multiple-indexes/schema.js";
 import * as multipleTablesSchema from "../__tests__/golden/multiple-tables/schema.js";
 import * as nonUniqueIndexSchema from "../__tests__/golden/non-unique-index/schema.js";
@@ -126,6 +127,24 @@ describe("generateMultiFileOutput golden tests", () => {
     );
     await expect(files.get("drizzleloaders/posts.ts")).toMatchFileSnapshot(
       "../__tests__/golden/multiple-tables/drizzleloaders/posts.ts",
+    );
+  });
+
+  it("generates loader files for composite index", async () => {
+    const tables = [analyzeTable(compositeIndexSchema.posts)];
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    await expect(files.get("drizzleloaders.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/composite-index/drizzleloaders.ts",
+    );
+    await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/composite-index/drizzleloaders/_internal.ts",
+    );
+    await expect(files.get("drizzleloaders/posts.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/composite-index/drizzleloaders/posts.ts",
     );
   });
 });

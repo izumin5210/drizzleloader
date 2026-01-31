@@ -1,3 +1,5 @@
+import { eq, inArray, and, or } from "drizzle-orm";
+import type { Column, InferSelectModel, Table } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type * as __schema from "../schema.js";
 
@@ -42,24 +44,73 @@ export function lookupOrError<K, V>(
 
 export function serializeCompositeKey<T extends Record<string, unknown>>(
   key: T,
-  keyColumns: (keyof T)[]
+  keyColumns: readonly (keyof T)[]
 ): string {
   return keyColumns.map((col) => String(key[col])).join("\0");
 }
 
-export function buildCompositeLookupMap<
-  TKey extends Record<string, unknown>,
-  TRow extends Record<string, unknown>
->(
+export function buildCompositeLookupMap<TRow extends Record<string, unknown>>(
   rows: TRow[],
-  keyColumns: (keyof TKey)[]
+  keyColumns: readonly string[]
 ): Map<string, TRow[]> {
   const map = new Map<string, TRow[]>();
   for (const row of rows) {
-    const keyStr = keyColumns.map((col) => String(row[col as string])).join("\0");
+    const keyStr = keyColumns.map((col) => String(row[col])).join("\0");
     const existing = map.get(keyStr) ?? [];
     existing.push(row);
     map.set(keyStr, existing);
   }
   return map;
+}
+
+export async function queryCompositeKey<TTable extends Table>(
+  db: DrizzleDb,
+  table: TTable,
+  columns: Column[],
+  keys: readonly Record<string, unknown>[]
+): Promise<InferSelectModel<TTable>[]> {
+  if (keys.length === 0) return [];
+
+  // Optimization: detect fixed columns (same value from start)
+  const fixedCols: { col: Column; value: unknown }[] = [];
+  const variableCols: Column[] = [];
+
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i]!;
+    const colName = col.name;
+    const firstValue = keys[0]![colName];
+    const allSame = keys.every((k) => k[colName] === firstValue);
+
+    if (allSame && variableCols.length === 0) {
+      fixedCols.push({ col, value: firstValue });
+    } else {
+      variableCols.push(col);
+    }
+  }
+
+  let query = db.select().from(table);
+
+  // Fixed columns -> WHERE eq
+  for (const { col, value } of fixedCols) {
+    query = query.where(eq(col, value)) as typeof query;
+  }
+
+  // Variable columns
+  if (variableCols.length === 0) {
+    // All fixed - return as is
+  } else if (variableCols.length === 1) {
+    // Single variable -> IN
+    const col = variableCols[0]!;
+    const values = [...new Set(keys.map((k) => k[col.name]))];
+    query = query.where(inArray(col, values as unknown[])) as typeof query;
+  } else {
+    // Multiple variable -> OR conditions
+    const conditions = keys.map((key) => {
+      const colConditions = variableCols.map((col) => eq(col, key[col.name]));
+      return and(...colConditions);
+    });
+    query = query.where(or(...conditions)) as typeof query;
+  }
+
+  return query as unknown as Promise<InferSelectModel<TTable>[]>;
 }

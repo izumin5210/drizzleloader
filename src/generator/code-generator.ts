@@ -1,5 +1,9 @@
-import type { AnalyzedTable } from "../analyzer/types.js";
-import { toCamelCase, toPascalCase } from "../utils/naming.js";
+import type { AnalyzedColumn, AnalyzedTable } from "../analyzer/types.js";
+import {
+  toCamelCase,
+  toCompositeLoaderName,
+  toPascalCase,
+} from "../utils/naming.js";
 
 export interface GeneratorOptions {
   schemaImport: string;
@@ -77,9 +81,7 @@ function generateTableLoaders(table: AnalyzedTable): string {
   if (table.primaryKey) {
     const col = table.primaryKey.columns[0];
     if (col) {
-      loaders.push(
-        generateUniqueLoader(table, col.name, col.tsType),
-      );
+      loaders.push(generateUniqueLoader(table, col.name, col.tsType));
     }
   }
 
@@ -162,16 +164,94 @@ function generateNonUniqueLoader(
 );`;
 }
 
+function generateCompositeNonUniqueLoader(
+  table: AnalyzedTable,
+  columns: AnalyzedColumn[],
+): string {
+  const loaderName = toCompositeLoaderName(columns.map((c) => c.name));
+  const tableName = table.name;
+
+  // Build key type: { authorId: number; category: string }
+  const keyTypeFields = columns
+    .map((col) => `${toCamelCase(col.name)}: ${col.tsType}`)
+    .join("; ");
+  const keyType = `{ ${keyTypeFields} }`;
+
+  // Build column names array for helpers
+  const columnNames = columns
+    .map((col) => `"${toCamelCase(col.name)}"`)
+    .join(", ");
+
+  // Build column accessors for query
+  const columnAccessors = columns
+    .map((c) => `__schema.${tableName}.${toCamelCase(c.name)}`)
+    .join(", ");
+
+  return `const ${loaderName} = new DataLoader<${keyType}, InferSelectModel<typeof __schema.${tableName}>[], string>(
+  async (keys) => {
+    const rows = await queryCompositeKey(db, __schema.${tableName}, [${columnAccessors}], keys as readonly Record<string, unknown>[]);
+    const map = buildCompositeLookupMap(rows, [${columnNames}] as const);
+    return keys.map((key) => map.get(serializeCompositeKey(key, [${columnNames}] as const)) ?? []);
+  },
+  { cacheKeyFn: (key) => serializeCompositeKey(key, [${columnNames}] as const) }
+);`;
+}
+
+function generateCompositeUniqueLoader(
+  table: AnalyzedTable,
+  columns: AnalyzedColumn[],
+): string {
+  const loaderName = toCompositeLoaderName(columns.map((c) => c.name));
+  const tableName = table.name;
+
+  const keyTypeFields = columns
+    .map((col) => `${toCamelCase(col.name)}: ${col.tsType}`)
+    .join("; ");
+  const keyType = `{ ${keyTypeFields} }`;
+
+  const columnNames = columns
+    .map((col) => `"${toCamelCase(col.name)}"`)
+    .join(", ");
+
+  const columnAccessors = columns
+    .map((c) => `__schema.${tableName}.${toCamelCase(c.name)}`)
+    .join(", ");
+
+  const errorColumns = columns
+    .map((col) => `{ ${col.name}: key.${toCamelCase(col.name)} }`)
+    .join(", ");
+
+  return `const ${loaderName} = new DataLoader<${keyType}, InferSelectModel<typeof __schema.${tableName}>, string>(
+  async (keys) => {
+    const rows = await queryCompositeKey(db, __schema.${tableName}, [${columnAccessors}], keys as readonly Record<string, unknown>[]);
+    const map = buildCompositeLookupMap(rows, [${columnNames}] as const);
+    return keys.map((key) => {
+      const found = map.get(serializeCompositeKey(key, [${columnNames}] as const))?.[0];
+      return found ?? new DrizzleLoaderNotFound({ table: "${tableName}", columns: [${errorColumns}] });
+    });
+  },
+  { cacheKeyFn: (key) => serializeCompositeKey(key, [${columnNames}] as const) }
+);`;
+}
+
 function getLoaderNames(table: AnalyzedTable): string[] {
   const names: string[] = [];
 
-  if (table.primaryKey?.columns[0]) {
-    names.push(`by${toPascalCase(table.primaryKey.columns[0].name)}`);
+  if (table.primaryKey) {
+    if (table.primaryKey.columns.length === 1 && table.primaryKey.columns[0]) {
+      names.push(`by${toPascalCase(table.primaryKey.columns[0].name)}`);
+    } else if (table.primaryKey.columns.length > 1) {
+      names.push(
+        toCompositeLoaderName(table.primaryKey.columns.map((c) => c.name)),
+      );
+    }
   }
 
   for (const idx of table.indexes) {
-    if (idx.columns[0]) {
+    if (idx.columns.length === 1 && idx.columns[0]) {
       names.push(`by${toPascalCase(idx.columns[0].name)}`);
+    } else if (idx.columns.length > 1) {
+      names.push(toCompositeLoaderName(idx.columns.map((c) => c.name)));
     }
   }
 
@@ -226,33 +306,86 @@ export function lookupOrError<K, V>(
 export function generateCompositeHelperFunctions(): string {
   return `export function serializeCompositeKey<T extends Record<string, unknown>>(
   key: T,
-  keyColumns: (keyof T)[]
+  keyColumns: readonly (keyof T)[]
 ): string {
   return keyColumns.map((col) => String(key[col])).join("\\0");
 }
 
-export function buildCompositeLookupMap<
-  TKey extends Record<string, unknown>,
-  TRow extends Record<string, unknown>
->(
+export function buildCompositeLookupMap<TRow extends Record<string, unknown>>(
   rows: TRow[],
-  keyColumns: (keyof TKey)[]
+  keyColumns: readonly string[]
 ): Map<string, TRow[]> {
   const map = new Map<string, TRow[]>();
   for (const row of rows) {
-    const keyStr = keyColumns.map((col) => String(row[col as string])).join("\\0");
+    const keyStr = keyColumns.map((col) => String(row[col])).join("\\0");
     const existing = map.get(keyStr) ?? [];
     existing.push(row);
     map.set(keyStr, existing);
   }
   return map;
+}
+
+export async function queryCompositeKey<TTable extends Table>(
+  db: DrizzleDb,
+  table: TTable,
+  columns: Column[],
+  keys: readonly Record<string, unknown>[]
+): Promise<InferSelectModel<TTable>[]> {
+  if (keys.length === 0) return [];
+
+  // Optimization: detect fixed columns (same value from start)
+  const fixedCols: { col: Column; value: unknown }[] = [];
+  const variableCols: Column[] = [];
+
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i]!;
+    const colName = col.name;
+    const firstValue = keys[0]![colName];
+    const allSame = keys.every((k) => k[colName] === firstValue);
+
+    if (allSame && variableCols.length === 0) {
+      fixedCols.push({ col, value: firstValue });
+    } else {
+      variableCols.push(col);
+    }
+  }
+
+  let query = db.select().from(table);
+
+  // Fixed columns -> WHERE eq
+  for (const { col, value } of fixedCols) {
+    query = query.where(eq(col, value)) as typeof query;
+  }
+
+  // Variable columns
+  if (variableCols.length === 0) {
+    // All fixed - return as is
+  } else if (variableCols.length === 1) {
+    // Single variable -> IN
+    const col = variableCols[0]!;
+    const values = [...new Set(keys.map((k) => k[col.name]))];
+    query = query.where(inArray(col, values as unknown[])) as typeof query;
+  } else {
+    // Multiple variable -> OR conditions
+    const conditions = keys.map((key) => {
+      const colConditions = variableCols.map((col) => eq(col, key[col.name]));
+      return and(...colConditions);
+    });
+    query = query.where(or(...conditions)) as typeof query;
+  }
+
+  return query as unknown as Promise<InferSelectModel<TTable>[]>;
 }`;
 }
 
 export function generateInternalFile(options: InternalFileOptions): string {
   const lines: string[] = [];
 
-  // Type imports from drizzle-orm
+  // Imports from drizzle-orm
+  lines.push('import { eq, inArray, and, or } from "drizzle-orm";');
+  lines.push(
+    'import type { Column, InferSelectModel, Table } from "drizzle-orm";',
+  );
   lines.push(
     'import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";',
   );
@@ -289,6 +422,15 @@ export function generateTableFile(
   table: AnalyzedTable,
   options: TableFileOptions,
 ): string {
+  const hasComposite = hasCompositeIndexes(table);
+
+  const compositeImports = hasComposite
+    ? `
+  buildCompositeLookupMap,
+  serializeCompositeKey,
+  queryCompositeKey,`
+    : "";
+
   const imports = `import DataLoader from "dataloader";
 import { inArray } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
@@ -297,7 +439,7 @@ import {
   type DrizzleDb,
   DrizzleLoaderNotFound,
   buildLookupMap,
-  lookupOrError,
+  lookupOrError,${compositeImports}
 } from "${options.internalImport}";`;
 
   const loaderFn = generateTableLoaderFunctionExported(table);
@@ -308,6 +450,11 @@ ${loaderFn}
 `;
 }
 
+function hasCompositeIndexes(table: AnalyzedTable): boolean {
+  if (table.primaryKey && table.primaryKey.columns.length > 1) return true;
+  return table.indexes.some((idx) => idx.columns.length > 1);
+}
+
 function generateTableLoaderFunctionExported(table: AnalyzedTable): string {
   const tablePascal = toPascalCase(table.name);
   const lines: string[] = [];
@@ -316,7 +463,8 @@ function generateTableLoaderFunctionExported(table: AnalyzedTable): string {
 
   const loaders: string[] = [];
 
-  if (table.primaryKey) {
+  // Single-column primary key
+  if (table.primaryKey && table.primaryKey.columns.length === 1) {
     const col = table.primaryKey.columns[0];
     if (col) {
       loaders.push(
@@ -324,14 +472,35 @@ function generateTableLoaderFunctionExported(table: AnalyzedTable): string {
       );
     }
   }
+  // Composite primary key
+  else if (table.primaryKey && table.primaryKey.columns.length > 1) {
+    loaders.push(
+      generateCompositeUniqueLoader(table, table.primaryKey.columns),
+    );
+  }
 
   for (const idx of table.indexes) {
-    const col = idx.columns[0];
-    if (!col) continue;
-    if (idx.unique) {
-      loaders.push(generateUniqueLoader(table, col.name, col.tsType, { useHelpers: true }));
-    } else {
-      loaders.push(generateNonUniqueLoader(table, col.name, col.tsType));
+    // Single-column index
+    if (idx.columns.length === 1) {
+      const col = idx.columns[0];
+      if (!col) continue;
+      if (idx.unique) {
+        loaders.push(
+          generateUniqueLoader(table, col.name, col.tsType, {
+            useHelpers: true,
+          }),
+        );
+      } else {
+        loaders.push(generateNonUniqueLoader(table, col.name, col.tsType));
+      }
+    }
+    // Composite index
+    else if (idx.columns.length > 1) {
+      if (idx.unique) {
+        loaders.push(generateCompositeUniqueLoader(table, idx.columns));
+      } else {
+        loaders.push(generateCompositeNonUniqueLoader(table, idx.columns));
+      }
     }
   }
 
