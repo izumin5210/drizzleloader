@@ -10,7 +10,7 @@ export interface InternalFileOptions {
   dialect: "pg";
 }
 
-export function generateLoaderCode(
+function generateLoaderCode(
   tables: AnalyzedTable[],
   options: GeneratorOptions,
 ): string {
