@@ -1,43 +1,27 @@
-import type { InferSelectModel } from "drizzle-orm";
-import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { inArray } from "drizzle-orm";
 import DataLoader from "dataloader";
-import * as __schema from "./schema.js";
+import { inArray } from "drizzle-orm";
+import type { InferSelectModel } from "drizzle-orm";
+import * as __schema from "../schema.js";
+import {
+  type DrizzleDb,
+  DrizzleLoaderNotFound,
+  buildLookupMap,
+  lookupOrError,
+} from "./_internal.js";
 
-type DrizzleDb = PgDatabase<PgQueryResultHKT, typeof __schema>;
-
-export class DrizzleLoaderNotFound extends Error {
-  readonly table: string;
-  readonly columns: Record<string, unknown>[];
-
-  constructor(options: { table: string; columns: Record<string, unknown>[] }) {
-    const columnStr = options.columns
-      .map((col) =>
-        Object.entries(col)
-          .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
-          .join(", ")
-      )
-      .join("; ");
-    super(`Record not found in ${options.table} for ${columnStr}`);
-    this.name = "DrizzleLoaderNotFound";
-    this.table = options.table;
-    this.columns = options.columns;
-  }
-}
-
-function createPostsLoaders(db: DrizzleDb) {
+export function createPostsLoaders(db: DrizzleDb) {
   const byId = new DataLoader<number, InferSelectModel<typeof __schema.posts>>(
     async (ids) => {
       const rows = await db.select().from(__schema.posts).where(inArray(__schema.posts.id, [...ids]));
-      const map = new Map(rows.map((row) => [row.id, row]));
-      return ids.map((key) => map.get(key) ?? new DrizzleLoaderNotFound({ table: "posts", columns: [{ id: key }] }));
+      const map = buildLookupMap(rows, (row) => row.id);
+      return ids.map((key) => lookupOrError(map, key, "posts", "id"));
     }
   );
   const bySlug = new DataLoader<string, InferSelectModel<typeof __schema.posts>>(
     async (slugs) => {
       const rows = await db.select().from(__schema.posts).where(inArray(__schema.posts.slug, [...slugs]));
-      const map = new Map(rows.map((row) => [row.slug, row]));
-      return slugs.map((key) => map.get(key) ?? new DrizzleLoaderNotFound({ table: "posts", columns: [{ slug: key }] }));
+      const map = buildLookupMap(rows, (row) => row.slug);
+      return slugs.map((key) => lookupOrError(map, key, "posts", "slug"));
     }
   );
   const byAuthorId = new DataLoader<number, InferSelectModel<typeof __schema.posts>[]>(
@@ -65,10 +49,4 @@ function createPostsLoaders(db: DrizzleDb) {
     }
   );
   return { byId, bySlug, byAuthorId, byCategoryId };
-}
-
-export function createDrizzleLoaders(db: DrizzleDb) {
-  return {
-    posts: createPostsLoaders(db),
-  };
 }

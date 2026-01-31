@@ -10,7 +10,7 @@
       "**",
       "!**/testdata/**/__generated__",
       "!**/__generated__/prisma",
-      "!src/__tests__/golden/**"
+      "!src/__tests__/golden"
     ],
     "ignoreUnknown": false
   },

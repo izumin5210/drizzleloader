@@ -1,16 +1,16 @@
-import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import {
+  bigint,
+  index,
+  integer,
   pgTable,
   serial,
-  integer,
   text,
-  varchar,
-  bigint,
-  uuid,
-  index,
   uniqueIndex,
+  uuid,
+  varchar,
 } from "drizzle-orm/pg-core";
+import { describe, expect, it } from "vitest";
 import { analyzeTable } from "./table-analyzer.js";
 
 describe("analyzeTable", () => {
@@ -36,7 +36,7 @@ describe("analyzeTable", () => {
           userId: integer("user_id"),
           roleId: integer("role_id"),
         },
-        (t) => [t.userId, t.roleId]
+        (t) => [t.userId, t.roleId],
       );
 
       const result = analyzeTable(userRoles);
@@ -64,7 +64,7 @@ describe("analyzeTable", () => {
           id: serial("id").primaryKey(),
           email: varchar("email", { length: 255 }),
         },
-        (t) => [uniqueIndex("users_email_idx").on(t.email)]
+        (t) => [uniqueIndex("users_email_idx").on(t.email)],
       );
 
       const result = analyzeTable(users);
@@ -83,7 +83,7 @@ describe("analyzeTable", () => {
           id: serial("id").primaryKey(),
           authorId: integer("author_id"),
         },
-        (t) => [index("posts_author_id_idx").on(t.authorId)]
+        (t) => [index("posts_author_id_idx").on(t.authorId)],
       );
 
       const result = analyzeTable(posts);
@@ -107,7 +107,7 @@ describe("analyzeTable", () => {
           index("posts_author_id_idx").on(t.authorId),
           index("posts_category_idx").on(t.category),
           uniqueIndex("posts_external_id_idx").on(t.externalId),
-        ]
+        ],
       );
 
       const result = analyzeTable(posts);
@@ -115,19 +115,19 @@ describe("analyzeTable", () => {
       expect(result.indexes).toHaveLength(3);
 
       const authorIdx = result.indexes.find(
-        (i) => i.name === "posts_author_id_idx"
+        (i) => i.name === "posts_author_id_idx",
       );
       expect(authorIdx?.column.name).toBe("author_id");
       expect(authorIdx?.unique).toBe(false);
 
       const categoryIdx = result.indexes.find(
-        (i) => i.name === "posts_category_idx"
+        (i) => i.name === "posts_category_idx",
       );
       expect(categoryIdx?.column.name).toBe("category");
       expect(categoryIdx?.unique).toBe(false);
 
       const externalIdx = result.indexes.find(
-        (i) => i.name === "posts_external_id_idx"
+        (i) => i.name === "posts_external_id_idx",
       );
       expect(externalIdx?.column.name).toBe("external_id");
       expect(externalIdx?.unique).toBe(true);
@@ -141,7 +141,7 @@ describe("analyzeTable", () => {
           authorId: integer("author_id"),
           category: varchar("category", { length: 100 }),
         },
-        (t) => [index("posts_composite_idx").on(t.authorId, t.category)]
+        (t) => [index("posts_composite_idx").on(t.authorId, t.category)],
       );
 
       const result = analyzeTable(posts);
@@ -161,7 +161,7 @@ describe("analyzeTable", () => {
           uniqueIndex("users_active_email_idx")
             .on(t.email)
             .where(eq(t.isActive, 1)),
-        ]
+        ],
       );
 
       const result = analyzeTable(users);
@@ -176,7 +176,7 @@ describe("analyzeTable", () => {
           id: serial("id").primaryKey(),
           externalId: bigint("external_id", { mode: "bigint" }),
         },
-        (t) => [uniqueIndex("items_external_id_idx").on(t.externalId)]
+        (t) => [uniqueIndex("items_external_id_idx").on(t.externalId)],
       );
 
       const result = analyzeTable(items);
