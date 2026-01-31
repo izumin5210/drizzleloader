@@ -8,6 +8,7 @@ import * as uuidPkSchema from "../__tests__/golden/uuid-pk/schema.js";
 import { analyzeTable } from "../analyzer/table-analyzer.js";
 import {
   generateHelperFunctions,
+  generateInternalFile,
   generateLoaderCode,
 } from "./code-generator.js";
 
@@ -77,5 +78,19 @@ describe("generateHelperFunctions", () => {
     const code = generateHelperFunctions();
     expect(code).toContain("export function lookupOrError<K, V>");
     expect(code).toContain("DrizzleLoaderNotFound");
+  });
+});
+
+describe("generateInternalFile", () => {
+  it("generates _internal.ts content with imports, types, error class, and helpers", () => {
+    const code = generateInternalFile({
+      schemaImport: "../schema.js",
+      dialect: "pg",
+    });
+    expect(code).toContain('import type * as __schema from "../schema.js"');
+    expect(code).toContain("export type DrizzleDb");
+    expect(code).toContain("export class DrizzleLoaderNotFound");
+    expect(code).toContain("export function buildLookupMap");
+    expect(code).toContain("export function lookupOrError");
   });
 });

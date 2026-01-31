@@ -5,6 +5,11 @@ export interface GeneratorOptions {
   schemaImport: string;
 }
 
+export interface InternalFileOptions {
+  schemaImport: string;
+  dialect: "pg";
+}
+
 export function generateLoaderCode(
   tables: AnalyzedTable[],
   options: GeneratorOptions,
@@ -202,4 +207,31 @@ export function lookupOrError<K, V>(
     map.get(key) ?? new DrizzleLoaderNotFound({ table, columns: [{ [column]: key }] })
   );
 }`;
+}
+
+export function generateInternalFile(options: InternalFileOptions): string {
+  const lines: string[] = [];
+
+  // Type imports from drizzle-orm
+  lines.push(
+    'import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";',
+  );
+  lines.push(`import type * as __schema from "${options.schemaImport}";`);
+  lines.push("");
+
+  // DrizzleDb type alias
+  lines.push(
+    "export type DrizzleDb = PgDatabase<PgQueryResultHKT, typeof __schema>;",
+  );
+  lines.push("");
+
+  // Error class
+  lines.push(generateErrorClass());
+  lines.push("");
+
+  // Helper functions
+  lines.push(generateHelperFunctions());
+  lines.push("");
+
+  return lines.join("\n");
 }
