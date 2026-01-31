@@ -133,10 +133,10 @@ const byAuthorId = new DataLoader<number, Post[]>(async (authorIds) => {
 
 ## Error Handling
 
-When a record is not found for a unique loader, DataLoader returns a `DrizzleLoaderNotFound` error:
+When a record is not found for a unique loader, DataLoader returns a `DrizzleLoaderNotFound` error. The error class is included in the generated code:
 
 ```typescript
-import { DrizzleLoaderNotFound } from "drizzleloader/runtime";
+import { DrizzleLoaderNotFound } from "./loaders";
 
 try {
   const user = await loaders.users.byId.load(999);
