@@ -33,27 +33,29 @@ export function analyzeTable(table: Table): AnalyzedTable {
   for (const idx of config.indexes) {
     const idxConfig = idx.config;
 
-    if (idxConfig.columns.length !== 1) {
-      continue;
-    }
-
     if (idxConfig.where !== undefined) {
       continue;
     }
 
-    const indexedCol = idxConfig.columns[0];
-    if (!indexedCol || !isIndexedColumn(indexedCol)) {
-      continue;
+    const columns: AnalyzedColumn[] = [];
+    for (const indexedCol of idxConfig.columns) {
+      if (!isIndexedColumn(indexedCol)) {
+        continue;
+      }
+      const col = columnByName.get(indexedCol.name);
+      if (!col) {
+        continue;
+      }
+      columns.push(toAnalyzedColumn(col));
     }
 
-    const col = columnByName.get(indexedCol.name);
-    if (!col) {
+    if (columns.length === 0) {
       continue;
     }
 
     indexes.push({
       name: idxConfig.name ?? "",
-      columns: [toAnalyzedColumn(col)],
+      columns,
       unique: idxConfig.unique ?? false,
     });
   }
