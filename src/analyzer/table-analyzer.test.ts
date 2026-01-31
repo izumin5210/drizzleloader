@@ -30,7 +30,7 @@ describe("analyzeTable", () => {
       expect(result.primaryKey?.columns[0]?.tsType).toBe("number");
     });
 
-    it("returns null for composite primary key", () => {
+    it("returns null for inline composite primary key syntax", () => {
       const userRoles = pgTable(
         "user_roles",
         {
@@ -42,6 +42,8 @@ describe("analyzeTable", () => {
 
       const result = analyzeTable(userRoles);
 
+      // The inline syntax (t) => [t.userId, t.roleId] creates columns, not a primaryKey
+      // Use primaryKey({ columns: [...] }) for composite primary keys
       expect(result.primaryKey).toBeNull();
     });
 
