@@ -1,27 +1,27 @@
-import { describe, expect, it } from "vitest";
 import {
-  pgTable,
-  serial,
-  integer,
-  smallint,
   bigint,
-  text,
-  varchar,
   boolean,
-  timestamp,
-  uuid,
-  real,
-  doublePrecision,
   date,
+  doublePrecision,
+  getTableConfig,
+  integer,
   json,
   jsonb,
-  getTableConfig,
+  pgTable,
+  real,
+  serial,
+  smallint,
+  text,
+  timestamp,
+  uuid,
+  varchar,
 } from "drizzle-orm/pg-core";
+import { describe, expect, it } from "vitest";
 import { mapColumnToTsType } from "./type-mapping.js";
 
 function createTableWithColumn<T>(
   columnName: string,
-  columnDef: T
+  columnDef: T,
 ): T extends object ? T : never {
   const table = pgTable("test_table", { [columnName]: columnDef });
   const config = getTableConfig(table);
@@ -45,7 +45,7 @@ describe("mapColumnToTsType", () => {
     it("maps smallint to number", () => {
       const column = createTableWithColumn(
         "small_count",
-        smallint("small_count")
+        smallint("small_count"),
       );
       expect(mapColumnToTsType(column)).toBe("number");
     });
@@ -58,7 +58,7 @@ describe("mapColumnToTsType", () => {
     it("maps doublePrecision to number", () => {
       const column = createTableWithColumn(
         "double_val",
-        doublePrecision("double_val")
+        doublePrecision("double_val"),
       );
       expect(mapColumnToTsType(column)).toBe("number");
     });
@@ -66,7 +66,7 @@ describe("mapColumnToTsType", () => {
     it("maps bigint with number mode to number", () => {
       const column = createTableWithColumn(
         "big_count",
-        bigint("big_count", { mode: "number" })
+        bigint("big_count", { mode: "number" }),
       );
       expect(mapColumnToTsType(column)).toBe("number");
     });
@@ -74,7 +74,7 @@ describe("mapColumnToTsType", () => {
     it("maps bigint with bigint mode to bigint", () => {
       const column = createTableWithColumn(
         "big_count",
-        bigint("big_count", { mode: "bigint" })
+        bigint("big_count", { mode: "bigint" }),
       );
       expect(mapColumnToTsType(column)).toBe("bigint");
     });
@@ -89,7 +89,7 @@ describe("mapColumnToTsType", () => {
     it("maps varchar to string", () => {
       const column = createTableWithColumn(
         "email",
-        varchar("email", { length: 255 })
+        varchar("email", { length: 255 }),
       );
       expect(mapColumnToTsType(column)).toBe("string");
     });
@@ -111,7 +111,7 @@ describe("mapColumnToTsType", () => {
     it("maps timestamp to Date by default", () => {
       const column = createTableWithColumn(
         "created_at",
-        timestamp("created_at")
+        timestamp("created_at"),
       );
       expect(mapColumnToTsType(column)).toBe("Date");
     });
@@ -119,7 +119,7 @@ describe("mapColumnToTsType", () => {
     it("maps timestamp with string mode to string", () => {
       const column = createTableWithColumn(
         "created_at",
-        timestamp("created_at", { mode: "string" })
+        timestamp("created_at", { mode: "string" }),
       );
       expect(mapColumnToTsType(column)).toBe("string");
     });
