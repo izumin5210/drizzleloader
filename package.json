@@ -16,6 +16,8 @@
   },
   "scripts": {
     "build": "tsc",
+    "check": "biome check --write",
+    "knip": "knip --fix",
     "test": "vitest"
   },
   "keywords": [
@@ -37,8 +39,10 @@
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
     "@types/node": "^25.1.0",
+    "@vitest/coverage-v8": "4.0.18",
     "dataloader": "^2.2.3",
     "drizzle-orm": "^0.45.1",
+    "knip": "5.82.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
