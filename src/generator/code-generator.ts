@@ -25,16 +25,17 @@ export function generateLoaderCode(
 }
 
 function generateImports(
-  tables: AnalyzedTable[],
+  _tables: AnalyzedTable[],
   options: GeneratorOptions
 ): string {
-  const tableNames = tables.map((t) => t.name).join(", ");
-
   return `import type { InferSelectModel } from "drizzle-orm";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { inArray } from "drizzle-orm";
 import DataLoader from "dataloader";
-import { ${tableNames} } from "${options.schemaImport}";
-import { DrizzleLoaderNotFound } from "drizzleloader/runtime";`;
+import * as __schema from "${options.schemaImport}";
+import { DrizzleLoaderNotFound } from "drizzleloader/runtime";
+
+type DrizzleDb = PgDatabase<PgQueryResultHKT, typeof __schema>;`;
 }
 
 function generateTableLoaders(table: AnalyzedTable): string {
@@ -82,9 +83,9 @@ function generateUniqueLoader(
   const tableName = table.name;
   const columnCamel = toCamelCase(columnName);
 
-  return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof ${tableName}>>(
+  return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof __schema.${tableName}>>(
   async (${keysVar}) => {
-    const rows = await db.select().from(${tableName}).where(inArray(${tableName}.${columnCamel}, [...${keysVar}]));
+    const rows = await db.select().from(__schema.${tableName}).where(inArray(__schema.${tableName}.${columnCamel}, [...${keysVar}]));
     const map = new Map(rows.map((row) => [row.${columnCamel}, row]));
     return ${keysVar}.map((key) => map.get(key) ?? new DrizzleLoaderNotFound({ table: "${tableName}", columns: [{ ${columnName}: key }] }));
   }
@@ -101,10 +102,10 @@ function generateNonUniqueLoader(
   const tableName = table.name;
   const columnCamel = toCamelCase(columnName);
 
-  return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof ${tableName}>[]>(
+  return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof __schema.${tableName}>[]>(
   async (${keysVar}) => {
-    const rows = await db.select().from(${tableName}).where(inArray(${tableName}.${columnCamel}, [...${keysVar}]));
-    const map = new Map<${tsType}, InferSelectModel<typeof ${tableName}>[]>();
+    const rows = await db.select().from(__schema.${tableName}).where(inArray(__schema.${tableName}.${columnCamel}, [...${keysVar}]));
+    const map = new Map<${tsType}, InferSelectModel<typeof __schema.${tableName}>[]>();
     for (const row of rows) {
       const existing = map.get(row.${columnCamel}) ?? [];
       existing.push(row);

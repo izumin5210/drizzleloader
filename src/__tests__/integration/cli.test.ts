@@ -83,6 +83,6 @@ export const users = pgTable("users", {
 
     const output = readFileSync(outputPath, "utf-8");
 
-    expect(output).toContain('import { users } from "../db/schema.js"');
+    expect(output).toContain('import * as __schema from "../db/schema.js"');
   });
 });

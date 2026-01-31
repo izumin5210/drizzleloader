@@ -1,13 +1,16 @@
 import type { InferSelectModel } from "drizzle-orm";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { inArray } from "drizzle-orm";
 import DataLoader from "dataloader";
-import { users } from "./schema";
+import * as __schema from "./schema";
 import { DrizzleLoaderNotFound } from "drizzleloader/runtime";
 
+type DrizzleDb = PgDatabase<PgQueryResultHKT, typeof __schema>;
+
 function createUsersLoaders(db: DrizzleDb) {
-  const byId = new DataLoader<number, InferSelectModel<typeof users>>(
+  const byId = new DataLoader<number, InferSelectModel<typeof __schema.users>>(
     async (ids) => {
-      const rows = await db.select().from(users).where(inArray(users.id, [...ids]));
+      const rows = await db.select().from(__schema.users).where(inArray(__schema.users.id, [...ids]));
       const map = new Map(rows.map((row) => [row.id, row]));
       return ids.map((key) => map.get(key) ?? new DrizzleLoaderNotFound({ table: "users", columns: [{ id: key }] }));
     }
