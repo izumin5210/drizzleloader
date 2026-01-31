@@ -75,24 +75,21 @@ function generateTableLoaders(table: AnalyzedTable): string {
   const loaders: string[] = [];
 
   if (table.primaryKey) {
-    loaders.push(
-      generateUniqueLoader(
-        table,
-        table.primaryKey.column.name,
-        table.primaryKey.column.tsType,
-      ),
-    );
+    const col = table.primaryKey.columns[0];
+    if (col) {
+      loaders.push(
+        generateUniqueLoader(table, col.name, col.tsType),
+      );
+    }
   }
 
   for (const idx of table.indexes) {
+    const col = idx.columns[0];
+    if (!col) continue;
     if (idx.unique) {
-      loaders.push(
-        generateUniqueLoader(table, idx.column.name, idx.column.tsType),
-      );
+      loaders.push(generateUniqueLoader(table, col.name, col.tsType));
     } else {
-      loaders.push(
-        generateNonUniqueLoader(table, idx.column.name, idx.column.tsType),
-      );
+      loaders.push(generateNonUniqueLoader(table, col.name, col.tsType));
     }
   }
 
@@ -168,12 +165,14 @@ function generateNonUniqueLoader(
 function getLoaderNames(table: AnalyzedTable): string[] {
   const names: string[] = [];
 
-  if (table.primaryKey) {
-    names.push(`by${toPascalCase(table.primaryKey.column.name)}`);
+  if (table.primaryKey?.columns[0]) {
+    names.push(`by${toPascalCase(table.primaryKey.columns[0].name)}`);
   }
 
   for (const idx of table.indexes) {
-    names.push(`by${toPascalCase(idx.column.name)}`);
+    if (idx.columns[0]) {
+      names.push(`by${toPascalCase(idx.columns[0].name)}`);
+    }
   }
 
   return names;
@@ -288,27 +287,21 @@ function generateTableLoaderFunctionExported(table: AnalyzedTable): string {
   const loaders: string[] = [];
 
   if (table.primaryKey) {
-    loaders.push(
-      generateUniqueLoader(
-        table,
-        table.primaryKey.column.name,
-        table.primaryKey.column.tsType,
-        { useHelpers: true },
-      ),
-    );
+    const col = table.primaryKey.columns[0];
+    if (col) {
+      loaders.push(
+        generateUniqueLoader(table, col.name, col.tsType, { useHelpers: true }),
+      );
+    }
   }
 
   for (const idx of table.indexes) {
+    const col = idx.columns[0];
+    if (!col) continue;
     if (idx.unique) {
-      loaders.push(
-        generateUniqueLoader(table, idx.column.name, idx.column.tsType, {
-          useHelpers: true,
-        }),
-      );
+      loaders.push(generateUniqueLoader(table, col.name, col.tsType, { useHelpers: true }));
     } else {
-      loaders.push(
-        generateNonUniqueLoader(table, idx.column.name, idx.column.tsType),
-      );
+      loaders.push(generateNonUniqueLoader(table, col.name, col.tsType));
     }
   }
 
