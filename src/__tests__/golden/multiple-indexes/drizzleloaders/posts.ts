@@ -9,8 +9,6 @@ import {
   lookupOrError,
 } from "./_internal.js";
 
-type PostsRow = InferSelectModel<typeof __schema.posts>;
-
 export function createPostsLoaders(db: DrizzleDb) {
   const byId = new DataLoader<number, InferSelectModel<typeof __schema.posts>>(
     async (ids) => {

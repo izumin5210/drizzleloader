@@ -260,9 +260,6 @@ export function generateTableFile(
   table: AnalyzedTable,
   options: TableFileOptions,
 ): string {
-  const tableName = toPascalCase(table.name);
-  const rowType = `${tableName}Row`;
-
   const imports = `import DataLoader from "dataloader";
 import { inArray } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
@@ -274,13 +271,9 @@ import {
   lookupOrError,
 } from "${options.internalImport}";`;
 
-  const typeAlias = `type ${rowType} = InferSelectModel<typeof __schema.${table.name}>;`;
-
   const loaderFn = generateTableLoaderFunctionExported(table);
 
   return `${imports}
-
-${typeAlias}
 
 ${loaderFn}
 `;
