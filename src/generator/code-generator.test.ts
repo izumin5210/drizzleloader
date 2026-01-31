@@ -11,6 +11,7 @@ import {
   generateHelperFunctions,
   generateInternalFile,
   generateLoaderCode,
+  generateMultiFileOutput,
   generateTableFile,
 } from "./code-generator.js";
 
@@ -164,5 +165,77 @@ describe("generateEntryPointFile", () => {
       importExtension: ".js",
     });
     expect(code).toContain("createPostsLoaders");
+  });
+});
+
+describe("generateMultiFileOutput", () => {
+  it("returns Map with all generated files", () => {
+    const tables = [analyzeTable(basicPkSchema.users)];
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    expect(files.get("drizzleloaders.ts")).toBeDefined();
+    expect(files.get("drizzleloaders/_internal.ts")).toBeDefined();
+    expect(files.get("drizzleloaders/users.ts")).toBeDefined();
+  });
+
+  it("adjusts schema import path for files inside drizzleloaders directory", () => {
+    const tables = [analyzeTable(basicPkSchema.users)];
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    const internalFile = files.get("drizzleloaders/_internal.ts");
+    expect(internalFile).toContain(
+      'import type * as __schema from "../schema.js"',
+    );
+
+    const tableFile = files.get("drizzleloaders/users.ts");
+    expect(tableFile).toContain('import * as __schema from "../schema.js"');
+  });
+
+  it("generates files for multiple tables", () => {
+    const tables = [
+      analyzeTable(multipleTablesSchema.users),
+      analyzeTable(multipleTablesSchema.posts),
+    ];
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    expect(files.get("drizzleloaders.ts")).toBeDefined();
+    expect(files.get("drizzleloaders/_internal.ts")).toBeDefined();
+    expect(files.get("drizzleloaders/users.ts")).toBeDefined();
+    expect(files.get("drizzleloaders/posts.ts")).toBeDefined();
+  });
+
+  it("handles parent directory schema imports", () => {
+    const tables = [analyzeTable(basicPkSchema.users)];
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "../db/schema.js",
+      importExtension: ".js",
+    });
+
+    const internalFile = files.get("drizzleloaders/_internal.ts");
+    expect(internalFile).toContain(
+      'import type * as __schema from "../../db/schema.js"',
+    );
+  });
+
+  it("preserves package imports without modification", () => {
+    const tables = [analyzeTable(basicPkSchema.users)];
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "@myapp/db/schema",
+      importExtension: ".js",
+    });
+
+    const internalFile = files.get("drizzleloaders/_internal.ts");
+    expect(internalFile).toContain(
+      'import type * as __schema from "@myapp/db/schema"',
+    );
   });
 });

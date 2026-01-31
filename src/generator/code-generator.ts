@@ -368,3 +368,69 @@ function generateEntryPointFactory(tables: AnalyzedTable[]): string {
 
   return lines.join("\n");
 }
+
+export interface MultiFileOutputOptions {
+  schemaImport: string;
+  importExtension: string;
+  dialect?: "pg";
+}
+
+export function generateMultiFileOutput(
+  tables: AnalyzedTable[],
+  options: MultiFileOutputOptions,
+): Map<string, string> {
+  const ext = options.importExtension;
+  const dialect = options.dialect ?? "pg";
+  const files = new Map<string, string>();
+
+  // _internal.ts - schema import needs adjustment for being inside drizzleloaders/
+  // If schemaImport is "./schema.js", from drizzleloaders/_internal.ts it becomes "../schema.js"
+  const internalSchemaImport = adjustSchemaImportPath(options.schemaImport);
+  files.set(
+    "drizzleloaders/_internal.ts",
+    generateInternalFile({ schemaImport: internalSchemaImport, dialect }),
+  );
+
+  // Per-table files
+  for (const table of tables) {
+    const fileName = `drizzleloaders/${toCamelCase(table.name)}.ts`;
+    // Schema import from drizzleloaders/users.ts to schema also needs "../" prefix
+    const tableSchemaImport = adjustSchemaImportPath(options.schemaImport);
+    files.set(
+      fileName,
+      generateTableFile(table, {
+        schemaImport: tableSchemaImport,
+        internalImport: `./_internal${ext}`,
+      }),
+    );
+  }
+
+  // Entry point
+  files.set(
+    "drizzleloaders.ts",
+    generateEntryPointFile(tables, {
+      schemaImport: options.schemaImport,
+      internalImport: `./drizzleloaders/_internal${ext}`,
+      tableImportPrefix: "./drizzleloaders/",
+      importExtension: ext,
+    }),
+  );
+
+  return files;
+}
+
+/**
+ * Adds "../" prefix for imports from inside drizzleloaders/ directory.
+ * - "./schema.js" becomes "../schema.js"
+ * - "../db/schema.js" becomes "../../db/schema.js"
+ * - Package imports like "@myapp/db" are returned unchanged
+ */
+function adjustSchemaImportPath(schemaImport: string): string {
+  if (schemaImport.startsWith("./")) {
+    return `../${schemaImport.slice(2)}`;
+  }
+  if (schemaImport.startsWith("../")) {
+    return `../${schemaImport}`;
+  }
+  return schemaImport;
+}
