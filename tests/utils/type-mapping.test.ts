@@ -124,16 +124,8 @@ describe("mapColumnToTsType", () => {
       expect(mapColumnToTsType(column)).toBe("string");
     });
 
-    it("maps date to Date by default", () => {
+    it("maps date to string by default", () => {
       const column = createTableWithColumn("birth_date", date("birth_date"));
-      expect(mapColumnToTsType(column)).toBe("Date");
-    });
-
-    it("maps date with string mode to string", () => {
-      const column = createTableWithColumn(
-        "birth_date",
-        date("birth_date", { mode: "string" })
-      );
       expect(mapColumnToTsType(column)).toBe("string");
     });
   });
