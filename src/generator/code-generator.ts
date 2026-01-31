@@ -303,7 +303,7 @@ export function lookupOrError<K, V>(
 }`;
 }
 
-export function generateCompositeHelperFunctions(): string {
+function generateCompositeHelperFunctions(): string {
   return `export function serializeCompositeKey<T extends Record<string, unknown>>(
   key: T,
   keyColumns: readonly (keyof T)[]
