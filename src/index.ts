@@ -1,13 +1,13 @@
-export { analyzeTable } from "./analyzer/table-analyzer.js";
+export { analyzeTable } from "./cli/analyzer/table-analyzer.js";
 export type {
   AnalyzedColumn,
   AnalyzedIndex,
   AnalyzedPrimaryKey,
   AnalyzedTable,
-} from "./analyzer/types.js";
+} from "./cli/analyzer/types.js";
 export {
   type GeneratorOptions,
   generateLoaderCode,
-} from "./generator/code-generator.js";
-export { toCamelCase, toPascalCase } from "./utils/naming.js";
-export { mapColumnToTsType } from "./utils/type-mapping.js";
+} from "./cli/generator/code-generator.js";
+export { toCamelCase, toPascalCase } from "./cli/utils/naming.js";
+export { mapColumnToTsType } from "./cli/utils/type-mapping.js";
