@@ -1,5 +1,5 @@
 import type { AnalyzedTable } from "../analyzer/types.js";
-import { toPascalCase, toCamelCase } from "../utils/naming.js";
+import { toCamelCase, toPascalCase } from "../utils/naming.js";
 
 export interface GeneratorOptions {
   schemaImport: string;
@@ -7,7 +7,7 @@ export interface GeneratorOptions {
 
 export function generateLoaderCode(
   tables: AnalyzedTable[],
-  options: GeneratorOptions
+  options: GeneratorOptions,
 ): string {
   const lines: string[] = [];
 
@@ -29,7 +29,7 @@ export function generateLoaderCode(
 
 function generateImports(
   _tables: AnalyzedTable[],
-  options: GeneratorOptions
+  options: GeneratorOptions,
 ): string {
   return `import type { InferSelectModel } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -65,23 +65,29 @@ function generateTableLoaders(table: AnalyzedTable): string {
   const tablePascal = toPascalCase(table.name);
   const lines: string[] = [];
 
-  lines.push(
-    `function create${tablePascal}Loaders(db: DrizzleDb) {`
-  );
+  lines.push(`function create${tablePascal}Loaders(db: DrizzleDb) {`);
 
   const loaders: string[] = [];
 
   if (table.primaryKey) {
     loaders.push(
-      generateUniqueLoader(table, table.primaryKey.column.name, table.primaryKey.column.tsType)
+      generateUniqueLoader(
+        table,
+        table.primaryKey.column.name,
+        table.primaryKey.column.tsType,
+      ),
     );
   }
 
   for (const idx of table.indexes) {
     if (idx.unique) {
-      loaders.push(generateUniqueLoader(table, idx.column.name, idx.column.tsType));
+      loaders.push(
+        generateUniqueLoader(table, idx.column.name, idx.column.tsType),
+      );
     } else {
-      loaders.push(generateNonUniqueLoader(table, idx.column.name, idx.column.tsType));
+      loaders.push(
+        generateNonUniqueLoader(table, idx.column.name, idx.column.tsType),
+      );
     }
   }
 
@@ -99,7 +105,7 @@ function generateTableLoaders(table: AnalyzedTable): string {
 function generateUniqueLoader(
   table: AnalyzedTable,
   columnName: string,
-  tsType: string
+  tsType: string,
 ): string {
   const loaderName = `by${toPascalCase(columnName)}`;
   const keysVar = `${toCamelCase(columnName)}s`;
@@ -118,7 +124,7 @@ function generateUniqueLoader(
 function generateNonUniqueLoader(
   table: AnalyzedTable,
   columnName: string,
-  tsType: string
+  tsType: string,
 ): string {
   const loaderName = `by${toPascalCase(columnName)}`;
   const keysVar = `${toCamelCase(columnName)}s`;
@@ -176,4 +182,13 @@ function indentLines(text: string, spaces: number): string {
     .split("\n")
     .map((line) => indent + line)
     .join("\n");
+}
+
+export function generateHelperFunctions(): string {
+  return `export function buildLookupMap<K, V>(
+  rows: V[],
+  keyFn: (row: V) => K
+): Map<K, V> {
+  return new Map(rows.map((row) => [keyFn(row), row]));
+}`;
 }
