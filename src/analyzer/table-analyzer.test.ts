@@ -25,8 +25,8 @@ describe("analyzeTable", () => {
 
       expect(result.name).toBe("users");
       expect(result.primaryKey).not.toBeNull();
-      expect(result.primaryKey?.column.name).toBe("id");
-      expect(result.primaryKey?.column.tsType).toBe("number");
+      expect(result.primaryKey?.columns[0]?.name).toBe("id");
+      expect(result.primaryKey?.columns[0]?.tsType).toBe("number");
     });
 
     it("returns null for composite primary key", () => {
@@ -71,8 +71,8 @@ describe("analyzeTable", () => {
 
       expect(result.indexes).toHaveLength(1);
       expect(result.indexes[0]?.name).toBe("users_email_idx");
-      expect(result.indexes[0]?.column.name).toBe("email");
-      expect(result.indexes[0]?.column.tsType).toBe("string");
+      expect(result.indexes[0]?.columns[0]?.name).toBe("email");
+      expect(result.indexes[0]?.columns[0]?.tsType).toBe("string");
       expect(result.indexes[0]?.unique).toBe(true);
     });
 
@@ -90,7 +90,7 @@ describe("analyzeTable", () => {
 
       expect(result.indexes).toHaveLength(1);
       expect(result.indexes[0]?.name).toBe("posts_author_id_idx");
-      expect(result.indexes[0]?.column.name).toBe("author_id");
+      expect(result.indexes[0]?.columns[0]?.name).toBe("author_id");
       expect(result.indexes[0]?.unique).toBe(false);
     });
 
@@ -117,19 +117,19 @@ describe("analyzeTable", () => {
       const authorIdx = result.indexes.find(
         (i) => i.name === "posts_author_id_idx",
       );
-      expect(authorIdx?.column.name).toBe("author_id");
+      expect(authorIdx?.columns[0]?.name).toBe("author_id");
       expect(authorIdx?.unique).toBe(false);
 
       const categoryIdx = result.indexes.find(
         (i) => i.name === "posts_category_idx",
       );
-      expect(categoryIdx?.column.name).toBe("category");
+      expect(categoryIdx?.columns[0]?.name).toBe("category");
       expect(categoryIdx?.unique).toBe(false);
 
       const externalIdx = result.indexes.find(
         (i) => i.name === "posts_external_id_idx",
       );
-      expect(externalIdx?.column.name).toBe("external_id");
+      expect(externalIdx?.columns[0]?.name).toBe("external_id");
       expect(externalIdx?.unique).toBe(true);
     });
 
@@ -182,7 +182,7 @@ describe("analyzeTable", () => {
       const result = analyzeTable(items);
 
       expect(result.indexes).toHaveLength(1);
-      expect(result.indexes[0]?.column.tsType).toBe("bigint");
+      expect(result.indexes[0]?.columns[0]?.tsType).toBe("bigint");
     });
   });
 });

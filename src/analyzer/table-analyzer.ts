@@ -26,7 +26,7 @@ export function analyzeTable(table: Table): AnalyzedTable {
 
   const primaryKeyColumn = config.columns.find((col) => col.primary);
   const primaryKey = primaryKeyColumn
-    ? { column: toAnalyzedColumn(primaryKeyColumn) }
+    ? { columns: [toAnalyzedColumn(primaryKeyColumn)] }
     : null;
 
   const indexes: AnalyzedIndex[] = [];
@@ -53,7 +53,7 @@ export function analyzeTable(table: Table): AnalyzedTable {
 
     indexes.push({
       name: idxConfig.name ?? "",
-      column: toAnalyzedColumn(col),
+      columns: [toAnalyzedColumn(col)],
       unique: idxConfig.unique ?? false,
     });
   }
