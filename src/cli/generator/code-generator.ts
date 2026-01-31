@@ -240,14 +240,6 @@ export function generateInternalFile(options: InternalFileOptions): string {
   );
   lines.push("");
 
-  // Error class
-  lines.push(generateErrorClass());
-  lines.push("");
-
-  // Helper functions
-  lines.push(generateHelperFunctions());
-  lines.push("");
-
   return lines.join("\n");
 }
 
@@ -263,13 +255,13 @@ export function generateTableFile(
   const imports = `import DataLoader from "dataloader";
 import { inArray } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
-import * as __schema from "${options.schemaImport}";
 import {
-  type DrizzleDb,
   DrizzleLoaderNotFound,
   buildLookupMap,
   lookupOrError,
-} from "${options.internalImport}";`;
+} from "drizzleloader";
+import * as __schema from "${options.schemaImport}";
+import { type DrizzleDb } from "${options.internalImport}";`;
 
   const loaderFn = generateTableLoaderFunctionExported(table);
 
@@ -348,8 +340,8 @@ export function generateEntryPointFile(
   // Import DrizzleDb type from _internal
   const typeImport = `import { type DrizzleDb } from "${options.internalImport}";`;
 
-  // Re-export DrizzleLoaderNotFound from _internal
-  const reExport = `export { DrizzleLoaderNotFound } from "${options.internalImport}";`;
+  // Re-export DrizzleLoaderNotFound from drizzleloader
+  const reExport = 'export { DrizzleLoaderNotFound } from "drizzleloader";';
 
   // Generate factory function that combines all table loaders
   const factoryFn = generateEntryPointFactory(tables);

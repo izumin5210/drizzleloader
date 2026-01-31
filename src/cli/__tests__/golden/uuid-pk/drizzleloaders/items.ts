@@ -1,13 +1,13 @@
 import DataLoader from "dataloader";
 import { inArray } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
-import * as __schema from "../schema.js";
 import {
-  type DrizzleDb,
   DrizzleLoaderNotFound,
   buildLookupMap,
   lookupOrError,
-} from "./_internal.js";
+} from "drizzleloader";
+import * as __schema from "../schema.js";
+import { type DrizzleDb } from "./_internal.js";
 
 export function createItemsLoaders(db: DrizzleDb) {
   const byId = new DataLoader<string, InferSelectModel<typeof __schema.items>>(

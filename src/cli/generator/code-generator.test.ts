@@ -147,31 +147,31 @@ describe("generateHelperFunctions", () => {
 });
 
 describe("generateInternalFile", () => {
-  it("generates _internal.ts content with imports, types, error class, and helpers", () => {
+  it("generates _internal.ts content with DrizzleDb type only", () => {
     const code = generateInternalFile({
       schemaImport: "../schema.js",
       dialect: "pg",
     });
     expect(code).toContain('import type * as __schema from "../schema.js"');
     expect(code).toContain("export type DrizzleDb");
-    expect(code).toContain("export class DrizzleLoaderNotFound");
-    expect(code).toContain("export function buildLookupMap");
-    expect(code).toContain("export function lookupOrError");
+    expect(code).not.toContain("DrizzleLoaderNotFound");
+    expect(code).not.toContain("buildLookupMap");
+    expect(code).not.toContain("lookupOrError");
   });
 });
 
 describe("generateTableFile", () => {
-  it("generates table loader file with imports from _internal", () => {
+  it("generates table loader file with imports from drizzleloader and _internal", () => {
     const table = analyzeTable(basicPkSchema.users);
     const code = generateTableFile(table, {
       schemaImport: "../../schema.js",
       internalImport: "./_internal.js",
     });
-    expect(code).toContain("type DrizzleDb,");
     expect(code).toContain("DrizzleLoaderNotFound,");
     expect(code).toContain("buildLookupMap,");
     expect(code).toContain("lookupOrError,");
-    expect(code).toContain('} from "./_internal.js"');
+    expect(code).toContain('} from "drizzleloader"');
+    expect(code).toContain('import { type DrizzleDb } from "./_internal.js"');
     expect(code).toContain('import * as __schema from "../../schema.js"');
     expect(code).toContain("export function createUsersLoaders");
   });
@@ -188,7 +188,7 @@ describe("generateTableFile", () => {
 });
 
 describe("generateEntryPointFile", () => {
-  it("generates entry point that imports table loaders and re-exports error", () => {
+  it("generates entry point that imports table loaders and re-exports error from drizzleloader", () => {
     const tables = [analyzeTable(basicPkSchema.users)];
     const code = generateEntryPointFile(tables, {
       schemaImport: "./schema.js",
@@ -200,7 +200,7 @@ describe("generateEntryPointFile", () => {
       'import { createUsersLoaders } from "./drizzleloaders/users.js"',
     );
     expect(code).toContain(
-      'export { DrizzleLoaderNotFound } from "./drizzleloaders/_internal.js"',
+      'export { DrizzleLoaderNotFound } from "drizzleloader"',
     );
     expect(code).toContain("export function createDrizzleLoaders");
   });
