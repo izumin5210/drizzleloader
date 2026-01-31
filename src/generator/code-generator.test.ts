@@ -16,11 +16,21 @@ import {
 } from "./code-generator.js";
 
 describe("generateLoaderCode", () => {
-  it("generates loader for basic primary key", async () => {
+  it("generates loader files for basic primary key", async () => {
     const tables = [analyzeTable(basicPkSchema.users)];
-    const code = generateLoaderCode(tables, { schemaImport: "./schema.js" });
-    await expect(code).toMatchFileSnapshot(
-      "../__tests__/golden/basic-pk/loaders.ts",
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    await expect(files.get("drizzleloaders.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/basic-pk/drizzleloaders.ts",
+    );
+    await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/basic-pk/drizzleloaders/_internal.ts",
+    );
+    await expect(files.get("drizzleloaders/users.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/basic-pk/drizzleloaders/users.ts",
     );
   });
 
