@@ -72,4 +72,10 @@ describe("generateHelperFunctions", () => {
     expect(code).toContain("keyFn: (row: V) => K");
     expect(code).toContain("): Map<K, V>");
   });
+
+  it("generates lookupOrError function", () => {
+    const code = generateHelperFunctions();
+    expect(code).toContain("export function lookupOrError<K, V>");
+    expect(code).toContain("DrizzleLoaderNotFound");
+  });
 });
