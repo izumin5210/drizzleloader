@@ -8,7 +8,6 @@ import * as uuidPkSchema from "../__tests__/golden/uuid-pk/schema.js";
 import { analyzeTable } from "../analyzer/table-analyzer.js";
 import {
   generateEntryPointFile,
-  generateHelperFunctions,
   generateInternalFile,
   generateMultiFileOutput,
   generateTableFile,
@@ -127,22 +126,6 @@ describe("generateMultiFileOutput golden tests", () => {
     await expect(files.get("drizzleloaders/posts.ts")).toMatchFileSnapshot(
       "../__tests__/golden/multiple-tables/drizzleloaders/posts.ts",
     );
-  });
-});
-
-describe("generateHelperFunctions", () => {
-  it("generates buildLookupMap function", () => {
-    const code = generateHelperFunctions();
-    expect(code).toContain("export function buildLookupMap<K, V>");
-    expect(code).toContain("rows: V[]");
-    expect(code).toContain("keyFn: (row: V) => K");
-    expect(code).toContain("): Map<K, V>");
-  });
-
-  it("generates lookupOrError function", () => {
-    const code = generateHelperFunctions();
-    expect(code).toContain("export function lookupOrError<K, V>");
-    expect(code).toContain("DrizzleLoaderNotFound");
   });
 });
 
