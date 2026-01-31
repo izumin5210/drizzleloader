@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-import { writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { program } from "commander";
 import type { Table } from "drizzle-orm";
 import { is } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { analyzeTable } from "./analyzer/table-analyzer.js";
-import { generateLoaderCode } from "./generator/code-generator.js";
+import { generateMultiFileOutput } from "./generator/code-generator.js";
 import {
   computeSchemaImport,
   type ImportExtension,
@@ -30,7 +30,7 @@ async function loadSchema(schemaPath: string): Promise<Table[]> {
 
 interface GenerateOptions {
   schema: string;
-  output: string;
+  outputDir: string;
   importExtension: ImportExtension;
 }
 
@@ -43,18 +43,33 @@ async function generate(options: GenerateOptions): Promise<void> {
   }
 
   const analyzedTables = tables.map((table) => analyzeTable(table));
+
+  // Compute schema import relative to the entry point (drizzleloaders.ts)
+  const entryPointPath = join(options.outputDir, "drizzleloaders.ts");
   const schemaImport = computeSchemaImport(
     options.schema,
-    options.output,
+    entryPointPath,
     options.importExtension,
   );
-  const code = generateLoaderCode(analyzedTables, { schemaImport });
 
-  const outputPath = resolve(process.cwd(), options.output);
-  writeFileSync(outputPath, code);
+  const importExtension =
+    options.importExtension === "none" ? "" : options.importExtension;
+  const files = generateMultiFileOutput(analyzedTables, {
+    schemaImport,
+    importExtension,
+  });
+
+  const outputDir = resolve(process.cwd(), options.outputDir);
+
+  // Create directories and write files
+  for (const [relativePath, content] of files) {
+    const fullPath = join(outputDir, relativePath);
+    mkdirSync(dirname(fullPath), { recursive: true });
+    writeFileSync(fullPath, content);
+  }
 
   console.log(
-    `Generated loaders for ${tables.length} table(s) at ${options.output}`,
+    `Generated loaders for ${tables.length} table(s) in ${options.outputDir}/`,
   );
 }
 
@@ -67,7 +82,7 @@ program
   .command("generate")
   .description("Generate DataLoader code from schema")
   .requiredOption("-s, --schema <path>", "Path to the Drizzle schema file")
-  .requiredOption("-o, --output <path>", "Path to the output file")
+  .requiredOption("-o, --output-dir <dir>", "Output directory")
   .option(
     "-e, --import-extension <ext>",
     "Extension for schema import (.js or none)",
