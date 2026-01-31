@@ -10,12 +10,11 @@ import {
   generateEntryPointFile,
   generateHelperFunctions,
   generateInternalFile,
-  generateLoaderCode,
   generateMultiFileOutput,
   generateTableFile,
 } from "./code-generator.js";
 
-describe("generateLoaderCode", () => {
+describe("generateMultiFileOutput golden tests", () => {
   it("generates loader files for basic primary key", async () => {
     const tables = [analyzeTable(basicPkSchema.users)];
     const files = generateMultiFileOutput(tables, {
