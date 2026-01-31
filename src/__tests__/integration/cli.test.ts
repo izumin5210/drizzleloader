@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
-const TEST_DIR = join(process.cwd(), "tests/integration/.tmp");
+const TEST_DIR = join(process.cwd(), "src/__tests__/integration/.tmp");
 
 describe("CLI integration", () => {
   beforeEach(() => {
