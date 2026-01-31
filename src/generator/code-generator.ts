@@ -107,15 +107,30 @@ function generateTableLoaders(table: AnalyzedTable): string {
   return lines.join("\n");
 }
 
+interface UniqueLoaderOptions {
+  useHelpers: boolean;
+}
+
 function generateUniqueLoader(
   table: AnalyzedTable,
   columnName: string,
   tsType: string,
+  options: UniqueLoaderOptions = { useHelpers: false },
 ): string {
   const loaderName = `by${toPascalCase(columnName)}`;
   const keysVar = `${toCamelCase(columnName)}s`;
   const tableName = table.name;
   const columnCamel = toCamelCase(columnName);
+
+  if (options.useHelpers) {
+    return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof __schema.${tableName}>>(
+  async (${keysVar}) => {
+    const rows = await db.select().from(__schema.${tableName}).where(inArray(__schema.${tableName}.${columnCamel}, [...${keysVar}]));
+    const map = buildLookupMap(rows, (row) => row.${columnCamel});
+    return ${keysVar}.map((key) => lookupOrError(map, key, "${tableName}", "${columnName}"));
+  }
+);`;
+  }
 
   return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof __schema.${tableName}>>(
   async (${keysVar}) => {
@@ -285,6 +300,7 @@ function generateTableLoaderFunctionExported(table: AnalyzedTable): string {
         table,
         table.primaryKey.column.name,
         table.primaryKey.column.tsType,
+        { useHelpers: true },
       ),
     );
   }
@@ -292,7 +308,9 @@ function generateTableLoaderFunctionExported(table: AnalyzedTable): string {
   for (const idx of table.indexes) {
     if (idx.unique) {
       loaders.push(
-        generateUniqueLoader(table, idx.column.name, idx.column.tsType),
+        generateUniqueLoader(table, idx.column.name, idx.column.tsType, {
+          useHelpers: true,
+        }),
       );
     } else {
       loaders.push(

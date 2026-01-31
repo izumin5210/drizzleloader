@@ -113,6 +113,16 @@ describe("generateTableFile", () => {
     expect(code).toContain('import * as __schema from "../../schema.js"');
     expect(code).toContain("export function createUsersLoaders");
   });
+
+  it("generates unique loader using buildLookupMap and lookupOrError", () => {
+    const table = analyzeTable(basicPkSchema.users);
+    const code = generateTableFile(table, {
+      schemaImport: "../../schema.js",
+      internalImport: "./_internal.js",
+    });
+    expect(code).toContain("buildLookupMap(rows, (row) => row.id)");
+    expect(code).toContain('lookupOrError(map, key, "users", "id")');
+  });
 });
 
 describe("generateEntryPointFile", () => {
