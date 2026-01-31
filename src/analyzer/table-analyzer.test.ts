@@ -149,6 +149,29 @@ describe("analyzeTable", () => {
       expect(result.indexes).toHaveLength(0);
     });
 
+    it("detects composite index with multiple columns", () => {
+      const posts = pgTable(
+        "posts",
+        {
+          id: serial("id").primaryKey(),
+          authorId: integer("author_id"),
+          category: varchar("category", { length: 100 }),
+        },
+        (t) => [index("posts_author_category_idx").on(t.authorId, t.category)],
+      );
+
+      const result = analyzeTable(posts);
+
+      expect(result.indexes).toHaveLength(1);
+      expect(result.indexes[0]?.name).toBe("posts_author_category_idx");
+      expect(result.indexes[0]?.columns).toHaveLength(2);
+      expect(result.indexes[0]?.columns[0]?.name).toBe("author_id");
+      expect(result.indexes[0]?.columns[0]?.tsType).toBe("number");
+      expect(result.indexes[0]?.columns[1]?.name).toBe("category");
+      expect(result.indexes[0]?.columns[1]?.tsType).toBe("string");
+      expect(result.indexes[0]?.unique).toBe(false);
+    });
+
     it("skips conditional indexes (with WHERE clause)", () => {
       const users = pgTable(
         "users",
