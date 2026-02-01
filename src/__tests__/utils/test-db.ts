@@ -7,7 +7,9 @@ export interface TestDbContext {
 }
 
 const getAdminConnectionString = (): string => {
-  return process.env.POSTGRES_URL ?? "postgres://postgres@localhost:5432/postgres";
+  return (
+    process.env.POSTGRES_URL ?? "postgres://postgres@localhost:5432/postgres"
+  );
 };
 
 function generateTimestamp(): string {
