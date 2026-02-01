@@ -13,12 +13,12 @@ jobs:
         command:
           - name: format-and-lint
             run: pnpm check
-          - name: build
-            run: pnpm build
           - name: knip
             run: pnpm knip
           - name: test-integration
-            run: pnpm test:integration
+            run: |
+              pnpm build
+              pnpm test:integration
       fail-fast: false
     runs-on: ubuntu-latest
     permissions:
