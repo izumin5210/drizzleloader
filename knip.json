@@ -6,5 +6,5 @@
   },
   "tags": ["-lintignore"],
   "ignoreFiles": ["src/cli/__tests__/golden/**"],
-  "ignoreDependencies": ["dataloader", "tsx"]
+  "ignoreDependencies": ["drizzle-kit", "tsx"]
 }
