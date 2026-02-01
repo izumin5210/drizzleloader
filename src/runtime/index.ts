@@ -1,2 +1,8 @@
 export { DrizzleLoaderNotFound } from "./errors.js";
-export { buildLookupMap, lookupOrError } from "./helpers.js";
+export {
+  buildCompositeLookupMap,
+  buildLookupMap,
+  lookupOrError,
+  queryCompositeKey,
+  serializeCompositeKey,
+} from "./helpers.js";

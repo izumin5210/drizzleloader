@@ -4,6 +4,7 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   serial,
   text,
   uniqueIndex,
@@ -25,11 +26,11 @@ describe("analyzeTable", () => {
 
       expect(result.name).toBe("users");
       expect(result.primaryKey).not.toBeNull();
-      expect(result.primaryKey?.column.name).toBe("id");
-      expect(result.primaryKey?.column.tsType).toBe("number");
+      expect(result.primaryKey?.columns[0]?.name).toBe("id");
+      expect(result.primaryKey?.columns[0]?.tsType).toBe("number");
     });
 
-    it("returns null for composite primary key", () => {
+    it("returns null for inline composite primary key syntax", () => {
       const userRoles = pgTable(
         "user_roles",
         {
@@ -41,6 +42,8 @@ describe("analyzeTable", () => {
 
       const result = analyzeTable(userRoles);
 
+      // The inline syntax (t) => [t.userId, t.roleId] creates columns, not a primaryKey
+      // Use primaryKey({ columns: [...] }) for composite primary keys
       expect(result.primaryKey).toBeNull();
     });
 
@@ -53,6 +56,24 @@ describe("analyzeTable", () => {
       const result = analyzeTable(logs);
 
       expect(result.primaryKey).toBeNull();
+    });
+
+    it("detects composite primary key", () => {
+      const userRoles = pgTable(
+        "user_roles",
+        {
+          userId: integer("user_id").notNull(),
+          roleId: integer("role_id").notNull(),
+        },
+        (t) => [primaryKey({ columns: [t.userId, t.roleId] })],
+      );
+
+      const result = analyzeTable(userRoles);
+
+      expect(result.primaryKey).not.toBeNull();
+      expect(result.primaryKey?.columns).toHaveLength(2);
+      expect(result.primaryKey?.columns[0]?.name).toBe("user_id");
+      expect(result.primaryKey?.columns[1]?.name).toBe("role_id");
     });
   });
 
@@ -71,8 +92,8 @@ describe("analyzeTable", () => {
 
       expect(result.indexes).toHaveLength(1);
       expect(result.indexes[0]?.name).toBe("users_email_idx");
-      expect(result.indexes[0]?.column.name).toBe("email");
-      expect(result.indexes[0]?.column.tsType).toBe("string");
+      expect(result.indexes[0]?.columns[0]?.name).toBe("email");
+      expect(result.indexes[0]?.columns[0]?.tsType).toBe("string");
       expect(result.indexes[0]?.unique).toBe(true);
     });
 
@@ -90,7 +111,7 @@ describe("analyzeTable", () => {
 
       expect(result.indexes).toHaveLength(1);
       expect(result.indexes[0]?.name).toBe("posts_author_id_idx");
-      expect(result.indexes[0]?.column.name).toBe("author_id");
+      expect(result.indexes[0]?.columns[0]?.name).toBe("author_id");
       expect(result.indexes[0]?.unique).toBe(false);
     });
 
@@ -117,23 +138,23 @@ describe("analyzeTable", () => {
       const authorIdx = result.indexes.find(
         (i) => i.name === "posts_author_id_idx",
       );
-      expect(authorIdx?.column.name).toBe("author_id");
+      expect(authorIdx?.columns[0]?.name).toBe("author_id");
       expect(authorIdx?.unique).toBe(false);
 
       const categoryIdx = result.indexes.find(
         (i) => i.name === "posts_category_idx",
       );
-      expect(categoryIdx?.column.name).toBe("category");
+      expect(categoryIdx?.columns[0]?.name).toBe("category");
       expect(categoryIdx?.unique).toBe(false);
 
       const externalIdx = result.indexes.find(
         (i) => i.name === "posts_external_id_idx",
       );
-      expect(externalIdx?.column.name).toBe("external_id");
+      expect(externalIdx?.columns[0]?.name).toBe("external_id");
       expect(externalIdx?.unique).toBe(true);
     });
 
-    it("skips composite indexes", () => {
+    it("detects composite indexes", () => {
       const posts = pgTable(
         "posts",
         {
@@ -146,7 +167,31 @@ describe("analyzeTable", () => {
 
       const result = analyzeTable(posts);
 
-      expect(result.indexes).toHaveLength(0);
+      expect(result.indexes).toHaveLength(1);
+      expect(result.indexes[0]?.columns).toHaveLength(2);
+    });
+
+    it("detects composite index with multiple columns", () => {
+      const posts = pgTable(
+        "posts",
+        {
+          id: serial("id").primaryKey(),
+          authorId: integer("author_id"),
+          category: varchar("category", { length: 100 }),
+        },
+        (t) => [index("posts_author_category_idx").on(t.authorId, t.category)],
+      );
+
+      const result = analyzeTable(posts);
+
+      expect(result.indexes).toHaveLength(1);
+      expect(result.indexes[0]?.name).toBe("posts_author_category_idx");
+      expect(result.indexes[0]?.columns).toHaveLength(2);
+      expect(result.indexes[0]?.columns[0]?.name).toBe("author_id");
+      expect(result.indexes[0]?.columns[0]?.tsType).toBe("number");
+      expect(result.indexes[0]?.columns[1]?.name).toBe("category");
+      expect(result.indexes[0]?.columns[1]?.tsType).toBe("string");
+      expect(result.indexes[0]?.unique).toBe(false);
     });
 
     it("skips conditional indexes (with WHERE clause)", () => {
@@ -182,7 +227,7 @@ describe("analyzeTable", () => {
       const result = analyzeTable(items);
 
       expect(result.indexes).toHaveLength(1);
-      expect(result.indexes[0]?.column.tsType).toBe("bigint");
+      expect(result.indexes[0]?.columns[0]?.tsType).toBe("bigint");
     });
   });
 });

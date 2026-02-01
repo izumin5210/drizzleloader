@@ -7,12 +7,12 @@ export interface AnalyzedColumn {
 }
 
 export interface AnalyzedPrimaryKey {
-  column: AnalyzedColumn;
+  columns: AnalyzedColumn[];
 }
 
 export interface AnalyzedIndex {
   name: string;
-  column: AnalyzedColumn;
+  columns: AnalyzedColumn[];
   unique: boolean;
 }
 

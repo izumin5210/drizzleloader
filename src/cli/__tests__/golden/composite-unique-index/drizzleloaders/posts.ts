@@ -1,0 +1,35 @@
+import DataLoader from "dataloader";
+import { inArray } from "drizzle-orm";
+import type { InferSelectModel } from "drizzle-orm";
+import {
+  DrizzleLoaderNotFound,
+  buildLookupMap,
+  lookupOrError,
+  buildCompositeLookupMap,
+  serializeCompositeKey,
+  queryCompositeKey,
+} from "drizzleloader";
+import * as __schema from "../schema.js";
+import { type DrizzleDb } from "./_internal.js";
+
+export function createPostsLoaders(db: DrizzleDb) {
+  const byId = new DataLoader<number, InferSelectModel<typeof __schema.posts>>(
+    async (ids) => {
+      const rows = await db.select().from(__schema.posts).where(inArray(__schema.posts.id, [...ids]));
+      const map = buildLookupMap(rows, (row) => row.id);
+      return ids.map((key) => lookupOrError(map, key, "posts", "id"));
+    }
+  );
+  const byAuthorIdAndSlug = new DataLoader<{ authorId: number; slug: string }, InferSelectModel<typeof __schema.posts>, string>(
+    async (keys) => {
+      const rows = await queryCompositeKey(db, __schema.posts, [__schema.posts.authorId, __schema.posts.slug], ["authorId", "slug"], keys as readonly Record<string, unknown>[]);
+      const map = buildCompositeLookupMap(rows, ["authorId", "slug"] as const);
+      return keys.map((key) => {
+        const found = map.get(serializeCompositeKey(key, ["authorId", "slug"] as const))?.[0];
+        return found ?? new DrizzleLoaderNotFound({ table: "posts", columns: [{ author_id: key.authorId, slug: key.slug }] });
+      });
+    },
+    { cacheKeyFn: (key) => serializeCompositeKey(key, ["authorId", "slug"] as const) }
+  );
+  return { byId, byAuthorIdAndSlug };
+}

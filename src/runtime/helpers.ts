@@ -1,3 +1,6 @@
+import type { Column, Table } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { DrizzleLoaderNotFound } from "./errors.js";
 
 export function buildLookupMap<K, V>(
@@ -17,4 +20,104 @@ export function lookupOrError<K, V>(
     map.get(key) ??
     new DrizzleLoaderNotFound({ table, columns: [{ [column]: key }] })
   );
+}
+
+export function serializeCompositeKey<T extends Record<string, unknown>>(
+  key: T,
+  keyColumns: readonly (keyof T)[],
+): string {
+  return keyColumns.map((col) => String(key[col])).join("\0");
+}
+
+export function buildCompositeLookupMap<TRow extends Record<string, unknown>>(
+  rows: TRow[],
+  keyColumns: readonly string[],
+): Map<string, TRow[]> {
+  const map = new Map<string, TRow[]>();
+  for (const row of rows) {
+    const keyStr = keyColumns.map((col) => String(row[col])).join("\0");
+    const existing = map.get(keyStr) ?? [];
+    existing.push(row);
+    map.set(keyStr, existing);
+  }
+  return map;
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: drizzle-orm's schema type is too complex to express generically
+type AnyDb = PgDatabase<PgQueryResultHKT, any>;
+
+type QueryBuilder = ReturnType<ReturnType<AnyDb["select"]>["from"]>;
+
+/**
+ * Builds a query for composite keys without executing it.
+ * Useful for testing with toSQL().
+ */
+export function buildCompositeQuery(
+  db: AnyDb,
+  table: Table,
+  columns: Column[],
+  keyProps: readonly string[],
+  keys: readonly Record<string, unknown>[],
+): QueryBuilder | null {
+  if (keys.length === 0) return null;
+
+  // Optimization: detect fixed columns (same value from start)
+  const fixedCols: { col: Column; keyProp: string; value: unknown }[] = [];
+  const variableCols: { col: Column; keyProp: string }[] = [];
+
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i]!;
+    const keyProp = keyProps[i]!;
+    const firstValue = keys[0]![keyProp];
+    const allSame = keys.every((k) => k[keyProp] === firstValue);
+
+    if (allSame && variableCols.length === 0) {
+      fixedCols.push({ col, keyProp, value: firstValue });
+    } else {
+      variableCols.push({ col, keyProp });
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: drizzle-orm's query builder types are complex and don't support generic chaining
+  let query: any = db.select().from(table);
+
+  // Collect all conditions
+  const fixedConditions = fixedCols.map(({ col, value }) => eq(col, value));
+
+  // Variable columns
+  if (variableCols.length === 0) {
+    // All fixed - apply fixed conditions only
+    if (fixedConditions.length > 0) {
+      query = query.where(and(...fixedConditions));
+    }
+  } else if (variableCols.length === 1) {
+    // Single variable -> IN
+    const { col, keyProp } = variableCols[0]!;
+    const values = [...new Set(keys.map((k) => k[keyProp]))];
+    const variableCondition = inArray(col, values as unknown[]);
+    query = query.where(and(...fixedConditions, variableCondition));
+  } else {
+    // Multiple variable -> OR conditions
+    const orConditions = keys.map((key) => {
+      const colConditions = variableCols.map(({ col, keyProp }) =>
+        eq(col, key[keyProp]),
+      );
+      return and(...colConditions);
+    });
+    query = query.where(and(...fixedConditions, or(...orConditions)));
+  }
+
+  return query as QueryBuilder;
+}
+
+export async function queryCompositeKey<TRow>(
+  db: AnyDb,
+  table: Table,
+  columns: Column[],
+  keyProps: readonly string[],
+  keys: readonly Record<string, unknown>[],
+): Promise<TRow[]> {
+  const query = buildCompositeQuery(db, table, columns, keyProps, keys);
+  if (query === null) return [];
+  return query as Promise<TRow[]>;
 }
