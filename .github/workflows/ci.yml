@@ -17,10 +17,26 @@ jobs:
             run: pnpm build
           - name: knip
             run: pnpm knip
+          - name: test-integration
+            run: pnpm test:integration
       fail-fast: false
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    services:
+      postgres:
+        image: ${{ matrix.command.name == 'test-integration' && 'postgres:17-alpine' || '' }}
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      POSTGRES_URL: postgres://postgres@localhost:5432/postgres
     name: ${{ matrix.command.name }}
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
