@@ -18,7 +18,9 @@
     "build": "tsc",
     "check": "biome check --write",
     "knip": "knip --fix",
-    "test": "vitest"
+    "test": "vitest --exclude 'src/__tests__/integration/**'",
+    "test:integration": "vitest src/__tests__/integration",
+    "test:all": "vitest"
   },
   "keywords": [
     "drizzle",
@@ -41,6 +43,7 @@
     "@types/node": "^25.1.0",
     "@vitest/coverage-v8": "4.0.18",
     "dataloader": "^2.2.3",
+    "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.1",
     "knip": "5.82.1",
     "postgres": "^3.4.8",
