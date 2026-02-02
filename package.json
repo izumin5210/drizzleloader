@@ -1,6 +1,6 @@
 {
   "name": "drizzleloader",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Generate DataLoaders from Drizzle ORM schema",
   "type": "module",
   "main": "dist/runtime/index.js",
