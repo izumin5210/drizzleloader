@@ -8,6 +8,7 @@ Eliminates boilerplate code for implementing data-loading patterns in GraphQL ap
 
 - Automatically generates DataLoaders from Drizzle table definitions
 - Supports primary keys and indexes (unique and non-unique)
+- Supports composite primary keys and composite indexes
 - Full TypeScript support with type inference
 - Batches queries using `inArray` for efficient database access
 
@@ -27,7 +28,7 @@ yarn add drizzleloader dataloader drizzle-orm
 
 ```typescript
 // src/db/schema.ts
-import { pgTable, serial, text, integer, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, varchar, index, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable(
   "users",
@@ -42,10 +43,15 @@ export const posts = pgTable(
   "posts",
   {
     id: serial("id").primaryKey(),
+    tenantId: integer("tenant_id"),
     authorId: integer("author_id"),
+    slug: varchar("slug", { length: 255 }),
     title: text("title"),
   },
-  (t) => [index("posts_author_id_idx").on(t.authorId)]
+  (t) => [
+    index("posts_author_id_idx").on(t.authorId),
+    uniqueIndex("posts_tenant_slug_idx").on(t.tenantId, t.slug),
+  ]
 );
 ```
 
@@ -53,13 +59,24 @@ export const posts = pgTable(
 
 ```bash
 # npm
-npm exec drizzleloader -- generate --schema src/db/schema.ts --output src/db/loaders.ts
+npm exec drizzleloader -- generate --schema src/db/schema.ts --output-dir src/db/__generated__
 
 # pnpm
-pnpm drizzleloader generate --schema src/db/schema.ts --output src/db/loaders.ts
+pnpm drizzleloader generate --schema src/db/schema.ts --output-dir src/db/__generated__
 
 # yarn
-yarn drizzleloader generate --schema src/db/schema.ts --output src/db/loaders.ts
+yarn drizzleloader generate --schema src/db/schema.ts --output-dir src/db/__generated__
+```
+
+This generates:
+
+```
+src/db/__generated__/
+├── drizzleloaders.ts           # Entry point with createDrizzleLoaders()
+└── drizzleloaders/
+    ├── _internal.ts            # Internal type definitions
+    ├── users.ts                # User loaders
+    └── posts.ts                # Post loaders
 ```
 
 ### 3. Use in your application
@@ -67,7 +84,7 @@ yarn drizzleloader generate --schema src/db/schema.ts --output src/db/loaders.ts
 ```typescript
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
-import { createDrizzleLoaders } from "./loaders";
+import { createDrizzleLoaders } from "./__generated__/drizzleloaders";
 
 const db = drizzle(pool, { schema });
 const loaders = createDrizzleLoaders(db);
@@ -80,6 +97,9 @@ const userByEmail = await loaders.users.byEmail.load("user@example.com");
 
 // Load all posts by author (non-unique index returns array)
 const posts = await loaders.posts.byAuthorId.load(userId);
+
+// Load a post by composite unique index
+const post = await loaders.posts.byTenantIdAndSlug.load({ tenantId: 1, slug: "hello-world" });
 ```
 
 ## CLI Options
@@ -89,7 +109,7 @@ drizzleloader generate [options]
 
 Options:
   -s, --schema <path>           Path to the Drizzle schema file (required)
-  -o, --output <path>           Path to the output file (required)
+  -o, --output-dir <dir>        Output directory (required)
   -e, --import-extension <ext>  Extension for schema import: ".js" or "none" (default: ".js")
 ```
 
@@ -109,8 +129,8 @@ For primary keys and unique indexes, loaders return a single value or throw `Dri
 ```typescript
 const byId = new DataLoader<number, User>(async (ids) => {
   const rows = await db.select().from(users).where(inArray(users.id, [...ids]));
-  const map = new Map(rows.map((row) => [row.id, row]));
-  return ids.map((key) => map.get(key) ?? new DrizzleLoaderNotFound({ table: "users", columns: [{ id: key }] }));
+  const map = buildLookupMap(rows, (row) => row.id);
+  return ids.map((key) => lookupOrError(map, key, "users", "id"));
 });
 ```
 
@@ -131,12 +151,49 @@ const byAuthorId = new DataLoader<number, Post[]>(async (authorIds) => {
 });
 ```
 
-## Error Handling
+### Composite Index Loaders
 
-When a record is not found for a unique loader, DataLoader returns a `DrizzleLoaderNotFound` error. The error class is included in the generated code:
+For composite indexes, loaders accept an object key with all indexed columns:
 
 ```typescript
-import { DrizzleLoaderNotFound } from "./loaders";
+// Composite unique index - returns single value
+const byTenantIdAndSlug = new DataLoader<
+  { tenantId: number; slug: string },
+  Post,
+  string
+>(
+  async (keys) => {
+    const rows = await queryCompositeKey(db, posts, [posts.tenantId, posts.slug], ["tenantId", "slug"], keys);
+    const map = buildCompositeLookupMap(rows, ["tenantId", "slug"]);
+    return keys.map((key) => {
+      const found = map.get(serializeCompositeKey(key, ["tenantId", "slug"]))?.[0];
+      return found ?? new DrizzleLoaderNotFound({ table: "posts", columns: [{ tenant_id: key.tenantId, slug: key.slug }] });
+    });
+  },
+  { cacheKeyFn: (key) => serializeCompositeKey(key, ["tenantId", "slug"]) }
+);
+
+// Composite non-unique index - returns array
+const byAuthorIdAndCategory = new DataLoader<
+  { authorId: number; category: string },
+  Post[],
+  string
+>(
+  async (keys) => {
+    const rows = await queryCompositeKey(db, posts, [posts.authorId, posts.category], ["authorId", "category"], keys);
+    const map = buildCompositeLookupMap(rows, ["authorId", "category"]);
+    return keys.map((key) => map.get(serializeCompositeKey(key, ["authorId", "category"])) ?? []);
+  },
+  { cacheKeyFn: (key) => serializeCompositeKey(key, ["authorId", "category"]) }
+);
+```
+
+## Error Handling
+
+When a record is not found for a unique loader, DataLoader returns a `DrizzleLoaderNotFound` error:
+
+```typescript
+import { DrizzleLoaderNotFound } from "./__generated__/drizzleloaders";
 
 try {
   const user = await loaders.users.byId.load(999);
@@ -151,7 +208,6 @@ try {
 ## Limitations
 
 - **PostgreSQL only**: Currently supports `drizzle-orm/pg-core` tables
-- **Composite indexes are skipped**: Only single-column indexes are supported
 - **Conditional indexes are skipped**: Indexes with `WHERE` clauses are not supported
 
 ## License
