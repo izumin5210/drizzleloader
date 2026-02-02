@@ -59,19 +59,19 @@ export const posts = pgTable(
 
 ```bash
 # npm
-npm exec drizzleloader -- generate --schema src/db/schema.ts --output-dir src/db
+npm exec drizzleloader -- generate --schema src/db/schema.ts --output-dir src/db/__generated__
 
 # pnpm
-pnpm drizzleloader generate --schema src/db/schema.ts --output-dir src/db
+pnpm drizzleloader generate --schema src/db/schema.ts --output-dir src/db/__generated__
 
 # yarn
-yarn drizzleloader generate --schema src/db/schema.ts --output-dir src/db
+yarn drizzleloader generate --schema src/db/schema.ts --output-dir src/db/__generated__
 ```
 
 This generates:
 
 ```
-src/db/
+src/db/__generated__/
 ├── drizzleloaders.ts           # Entry point with createDrizzleLoaders()
 └── drizzleloaders/
     ├── _internal.ts            # Internal type definitions
@@ -84,7 +84,7 @@ src/db/
 ```typescript
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
-import { createDrizzleLoaders } from "./drizzleloaders";
+import { createDrizzleLoaders } from "./__generated__/drizzleloaders";
 
 const db = drizzle(pool, { schema });
 const loaders = createDrizzleLoaders(db);
@@ -193,7 +193,7 @@ const byAuthorIdAndCategory = new DataLoader<
 When a record is not found for a unique loader, DataLoader returns a `DrizzleLoaderNotFound` error:
 
 ```typescript
-import { DrizzleLoaderNotFound } from "./drizzleloaders";
+import { DrizzleLoaderNotFound } from "./__generated__/drizzleloaders";
 
 try {
   const user = await loaders.users.byId.load(999);
