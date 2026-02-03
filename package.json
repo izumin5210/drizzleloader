@@ -4,7 +4,7 @@
   "description": "Generate DataLoaders from Drizzle ORM schema",
   "type": "module",
   "bin": {
-    "drizzleloader": "./dist/cli/index.js"
+    "drizzleloader": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
