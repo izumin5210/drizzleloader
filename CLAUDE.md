@@ -22,7 +22,7 @@ The codebase follows a pipeline architecture:
 
 1. **Analyzer** (`src/analyzer/`) - Inspects Drizzle table definitions to extract loader metadata (primary keys, indexes)
 2. **Generator** (`src/generator/`) - Generates TypeScript DataLoader code from analyzed tables
-3. **CLI** (`src/cli.ts`) - Entry point using Commander.js, orchestrates the analysis → generation flow
+3. **CLI** (`src/index.ts`) - Entry point using Commander.js, orchestrates the analysis → generation flow
 
 Key utilities:
 - `src/utils/naming.ts` - Case conversion (snake_case → PascalCase/camelCase)
