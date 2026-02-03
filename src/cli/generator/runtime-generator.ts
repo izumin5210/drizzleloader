@@ -161,7 +161,7 @@ export function buildCompositeLookupMap<TRow extends Record<string, unknown>>(
  * Builds a query for composite keys without executing it.
  * Useful for testing with toSQL().
  */
-export function buildCompositeQuery(
+function buildCompositeQuery(
   db: AnyDb,
   table: Table,
   columns: Column[],
