@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import type { Table } from "drizzle-orm";
 import { is } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
+import { createJiti } from "jiti";
 import { analyzeTable } from "./analyzer/table-analyzer.js";
 import { generateMultiFileOutput } from "./generator/code-generator.js";
 import {
@@ -45,12 +45,15 @@ Options:
 }
 
 async function loadSchema(schemaPath: string): Promise<Table[]> {
+  const jiti = createJiti(import.meta.url, {
+    moduleCache: false,
+  });
+
   const absolutePath = resolve(process.cwd(), schemaPath);
-  const fileUrl = pathToFileURL(absolutePath).href;
-  const module = await import(fileUrl);
+  const module = await jiti.import(absolutePath);
 
   const tables: Table[] = [];
-  for (const [, value] of Object.entries(module)) {
+  for (const [, value] of Object.entries(module as Record<string, unknown>)) {
     if (is(value, PgTable)) {
       tables.push(value as Table);
     }
