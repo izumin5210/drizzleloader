@@ -3,16 +3,8 @@
   "version": "0.1.0",
   "description": "Generate DataLoaders from Drizzle ORM schema",
   "type": "module",
-  "main": "dist/runtime/index.js",
-  "types": "dist/runtime/index.d.ts",
   "bin": {
     "drizzleloader": "./dist/cli/index.js"
-  },
-  "exports": {
-    ".": {
-      "import": "./dist/runtime/index.js",
-      "types": "./dist/runtime/index.d.ts"
-    }
   },
   "scripts": {
     "build": "tsc",

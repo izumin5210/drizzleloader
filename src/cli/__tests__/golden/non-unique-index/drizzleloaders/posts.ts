@@ -7,7 +7,7 @@ import {
   DrizzleLoaderNotFound,
   buildLookupMap,
   lookupOrError,
-} from "drizzleloader";
+} from "./_runtime.js";
 import * as __schema from "../schema.js";
 import { type DrizzleDb } from "./_internal.js";
 

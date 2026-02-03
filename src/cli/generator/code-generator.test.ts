@@ -30,6 +30,9 @@ describe("generateMultiFileOutput golden tests", () => {
     await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
       "../__tests__/golden/basic-pk/drizzleloaders/_internal.ts",
     );
+    await expect(files.get("drizzleloaders/_runtime.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/basic-pk/drizzleloaders/_runtime.ts",
+    );
     await expect(files.get("drizzleloaders/users.ts")).toMatchFileSnapshot(
       "../__tests__/golden/basic-pk/drizzleloaders/users.ts",
     );
@@ -47,6 +50,9 @@ describe("generateMultiFileOutput golden tests", () => {
     );
     await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
       "../__tests__/golden/uuid-pk/drizzleloaders/_internal.ts",
+    );
+    await expect(files.get("drizzleloaders/_runtime.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/uuid-pk/drizzleloaders/_runtime.ts",
     );
     await expect(files.get("drizzleloaders/items.ts")).toMatchFileSnapshot(
       "../__tests__/golden/uuid-pk/drizzleloaders/items.ts",
@@ -66,6 +72,9 @@ describe("generateMultiFileOutput golden tests", () => {
     await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
       "../__tests__/golden/unique-index/drizzleloaders/_internal.ts",
     );
+    await expect(files.get("drizzleloaders/_runtime.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/unique-index/drizzleloaders/_runtime.ts",
+    );
     await expect(files.get("drizzleloaders/users.ts")).toMatchFileSnapshot(
       "../__tests__/golden/unique-index/drizzleloaders/users.ts",
     );
@@ -84,6 +93,9 @@ describe("generateMultiFileOutput golden tests", () => {
     await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
       "../__tests__/golden/non-unique-index/drizzleloaders/_internal.ts",
     );
+    await expect(files.get("drizzleloaders/_runtime.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/non-unique-index/drizzleloaders/_runtime.ts",
+    );
     await expect(files.get("drizzleloaders/posts.ts")).toMatchFileSnapshot(
       "../__tests__/golden/non-unique-index/drizzleloaders/posts.ts",
     );
@@ -101,6 +113,9 @@ describe("generateMultiFileOutput golden tests", () => {
     );
     await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
       "../__tests__/golden/multiple-indexes/drizzleloaders/_internal.ts",
+    );
+    await expect(files.get("drizzleloaders/_runtime.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/multiple-indexes/drizzleloaders/_runtime.ts",
     );
     await expect(files.get("drizzleloaders/posts.ts")).toMatchFileSnapshot(
       "../__tests__/golden/multiple-indexes/drizzleloaders/posts.ts",
@@ -123,6 +138,9 @@ describe("generateMultiFileOutput golden tests", () => {
     await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
       "../__tests__/golden/multiple-tables/drizzleloaders/_internal.ts",
     );
+    await expect(files.get("drizzleloaders/_runtime.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/multiple-tables/drizzleloaders/_runtime.ts",
+    );
     await expect(files.get("drizzleloaders/users.ts")).toMatchFileSnapshot(
       "../__tests__/golden/multiple-tables/drizzleloaders/users.ts",
     );
@@ -144,6 +162,9 @@ describe("generateMultiFileOutput golden tests", () => {
     await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
       "../__tests__/golden/composite-index/drizzleloaders/_internal.ts",
     );
+    await expect(files.get("drizzleloaders/_runtime.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/composite-index/drizzleloaders/_runtime.ts",
+    );
     await expect(files.get("drizzleloaders/posts.ts")).toMatchFileSnapshot(
       "../__tests__/golden/composite-index/drizzleloaders/posts.ts",
     );
@@ -162,6 +183,9 @@ describe("generateMultiFileOutput golden tests", () => {
     await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
       "../__tests__/golden/composite-unique-index/drizzleloaders/_internal.ts",
     );
+    await expect(files.get("drizzleloaders/_runtime.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/composite-unique-index/drizzleloaders/_runtime.ts",
+    );
     await expect(files.get("drizzleloaders/posts.ts")).toMatchFileSnapshot(
       "../__tests__/golden/composite-unique-index/drizzleloaders/posts.ts",
     );
@@ -179,6 +203,9 @@ describe("generateMultiFileOutput golden tests", () => {
     );
     await expect(files.get("drizzleloaders/_internal.ts")).toMatchFileSnapshot(
       "../__tests__/golden/composite-pk/drizzleloaders/_internal.ts",
+    );
+    await expect(files.get("drizzleloaders/_runtime.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/composite-pk/drizzleloaders/_runtime.ts",
     );
     await expect(files.get("drizzleloaders/userRoles.ts")).toMatchFileSnapshot(
       "../__tests__/golden/composite-pk/drizzleloaders/userRoles.ts",
@@ -201,16 +228,17 @@ describe("generateInternalFile", () => {
 });
 
 describe("generateTableFile", () => {
-  it("generates table loader file with imports from drizzleloader and _internal", () => {
+  it("generates table loader file with imports from runtime and _internal", () => {
     const table = analyzeTable(basicPkSchema.users);
     const code = generateTableFile(table, {
       schemaImport: "../../schema.js",
       internalImport: "./_internal.js",
+      runtimeImport: "./_runtime.js",
     });
     expect(code).toContain("DrizzleLoaderNotFound,");
     expect(code).toContain("buildLookupMap,");
     expect(code).toContain("lookupOrError,");
-    expect(code).toContain('} from "drizzleloader"');
+    expect(code).toContain('} from "./_runtime.js"');
     expect(code).toContain('import { type DrizzleDb } from "./_internal.js"');
     expect(code).toContain('import * as __schema from "../../schema.js"');
     expect(code).toContain("export function createUsersLoaders");
@@ -221,6 +249,7 @@ describe("generateTableFile", () => {
     const code = generateTableFile(table, {
       schemaImport: "../../schema.js",
       internalImport: "./_internal.js",
+      runtimeImport: "./_runtime.js",
     });
     expect(code).toContain("buildLookupMap(rows, (row) => row.id)");
     expect(code).toContain('lookupOrError(map, key, "users", "id")');
@@ -228,19 +257,20 @@ describe("generateTableFile", () => {
 });
 
 describe("generateEntryPointFile", () => {
-  it("generates entry point that imports table loaders and re-exports error from drizzleloader", () => {
+  it("generates entry point that imports table loaders and re-exports error from runtime", () => {
     const tables = [analyzeTable(basicPkSchema.users)];
     const code = generateEntryPointFile(tables, {
       schemaImport: "./schema.js",
       internalImport: "./drizzleloaders/_internal.js",
       tableImportPrefix: "./drizzleloaders/",
       importExtension: ".js",
+      runtimeImport: "./drizzleloaders/_runtime.js",
     });
     expect(code).toContain(
       'import { createUsersLoaders } from "./drizzleloaders/users.js"',
     );
     expect(code).toContain(
-      'export { DrizzleLoaderNotFound } from "drizzleloader"',
+      'export { DrizzleLoaderNotFound } from "./drizzleloaders/_runtime.js"',
     );
     expect(code).toContain("export function createDrizzleLoaders");
   });
@@ -255,6 +285,7 @@ describe("generateEntryPointFile", () => {
       internalImport: "./drizzleloaders/_internal.js",
       tableImportPrefix: "./drizzleloaders/",
       importExtension: ".js",
+      runtimeImport: "./drizzleloaders/_runtime.js",
     });
     expect(code).toContain(
       'import { createUsersLoaders } from "./drizzleloaders/users.js"',
@@ -275,13 +306,14 @@ describe("generateEntryPointFile", () => {
       internalImport: "./drizzleloaders/_internal.js",
       tableImportPrefix: "./drizzleloaders/",
       importExtension: ".js",
+      runtimeImport: "./drizzleloaders/_runtime.js",
     });
     expect(code).toContain("createPostsLoaders");
   });
 });
 
 describe("generateMultiFileOutput", () => {
-  it("returns Map with all generated files", () => {
+  it("returns Map with all generated files including runtime", () => {
     const tables = [analyzeTable(basicPkSchema.users)];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
@@ -290,7 +322,35 @@ describe("generateMultiFileOutput", () => {
 
     expect(files.get("drizzleloaders.ts")).toBeDefined();
     expect(files.get("drizzleloaders/_internal.ts")).toBeDefined();
+    expect(files.get("drizzleloaders/_runtime.ts")).toBeDefined();
     expect(files.get("drizzleloaders/users.ts")).toBeDefined();
+  });
+
+  it("generates runtime file with necessary helpers", () => {
+    const tables = [analyzeTable(basicPkSchema.users)];
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    const runtimeFile = files.get("drizzleloaders/_runtime.ts");
+    expect(runtimeFile).toContain("class DrizzleLoaderNotFound");
+    expect(runtimeFile).toContain("export function buildLookupMap");
+    expect(runtimeFile).toContain("export function lookupOrError");
+  });
+
+  it("generates runtime file with composite helpers when needed", () => {
+    const tables = [analyzeTable(compositeIndexSchema.posts)];
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    const runtimeFile = files.get("drizzleloaders/_runtime.ts");
+    expect(runtimeFile).toContain("class DrizzleLoaderNotFound");
+    expect(runtimeFile).toContain("export function serializeCompositeKey");
+    expect(runtimeFile).toContain("export function buildCompositeLookupMap");
+    expect(runtimeFile).toContain("export async function queryCompositeKey");
   });
 
   it("adjusts schema import path for files inside drizzleloaders directory", () => {

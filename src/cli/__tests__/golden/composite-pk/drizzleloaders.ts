@@ -3,7 +3,7 @@
 import { createUserRolesLoaders } from "./drizzleloaders/userRoles.js";
 import { type DrizzleDb } from "./drizzleloaders/_internal.js";
 
-export { DrizzleLoaderNotFound } from "drizzleloader";
+export { DrizzleLoaderNotFound } from "./drizzleloaders/_runtime.js";
 
 export function createDrizzleLoaders(db: DrizzleDb) {
   return {
