@@ -2,7 +2,7 @@ import * as path from "node:path";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { DrizzleDb } from "../golden/composite-index/drizzleloaders/_internal.js";
+import type { DrizzleDb } from "../golden/composite-index/drizzleloaders/_runtime.js";
 import { createPostsLoaders } from "../golden/composite-index/drizzleloaders/posts.js";
 import * as schema from "../golden/composite-index/schema.js";
 import { QueryCapture } from "../utils/query-logger.js";
