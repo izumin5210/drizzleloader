@@ -5,10 +5,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 describe("CLI generate command (built)", () => {
   const outputDir = "/tmp/claude/drizzleloader-test-output";
-  const cliPath = resolve(import.meta.dirname, "../../../dist/cli/index.js");
+  const cliPath = resolve(import.meta.dirname, "../../../dist/index.js");
   const schemaPath = resolve(
     import.meta.dirname,
-    "../../cli/__tests__/golden/basic-pk/schema.ts",
+    "../../__tests__/golden/basic-pk/schema.ts",
   );
 
   afterEach(() => {
