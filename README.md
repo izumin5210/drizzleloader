@@ -15,12 +15,14 @@ Eliminates boilerplate code for implementing data-loading patterns in GraphQL ap
 ## Installation
 
 ```bash
-npm install drizzleloader dataloader drizzle-orm
+npm install -D drizzleloader && npm install dataloader drizzle-orm
 # or
-pnpm add drizzleloader dataloader drizzle-orm
+pnpm add -D drizzleloader && pnpm add dataloader drizzle-orm
 # or
-yarn add drizzleloader dataloader drizzle-orm
+yarn add -D drizzleloader && yarn add dataloader drizzle-orm
 ```
+
+> **Note**: drizzleloader is a code generator and can be installed as a devDependency. The generated code has no runtime dependency on drizzleloader.
 
 ## Quick Start
 
@@ -75,6 +77,7 @@ src/db/__generated__/
 ├── drizzleloaders.ts           # Entry point with createDrizzleLoaders()
 └── drizzleloaders/
     ├── _internal.ts            # Internal type definitions
+    ├── _runtime.ts             # Runtime helpers (DrizzleLoaderNotFound, etc.)
     ├── users.ts                # User loaders
     └── posts.ts                # Post loaders
 ```

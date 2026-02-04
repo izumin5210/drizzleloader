@@ -5,6 +5,6 @@
     "type": true
   },
   "tags": ["-lintignore"],
-  "ignoreFiles": ["src/cli/__tests__/golden/**"],
+  "ignoreFiles": ["src/__tests__/golden/**"],
   "ignoreDependencies": ["drizzle-kit", "tsx"]
 }

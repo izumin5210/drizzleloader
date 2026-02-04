@@ -1,0 +1,142 @@
+import { describe, expect, it } from "vitest";
+import * as basicPkSchema from "../__tests__/golden/basic-pk/schema.js";
+import * as compositeIndexSchema from "../__tests__/golden/composite-index/schema.js";
+import * as nonUniqueIndexSchema from "../__tests__/golden/non-unique-index/schema.js";
+import { analyzeTable } from "../analyzer/table-analyzer.js";
+import {
+  analyzeRuntimeUsage,
+  generateRuntimeFile,
+  type RuntimeUsage,
+} from "./runtime-generator.js";
+
+describe("analyzeRuntimeUsage", () => {
+  it("returns needsSimpleLookup=true for single-column primary key", () => {
+    const tables = [analyzeTable(basicPkSchema.users)];
+    const usage = analyzeRuntimeUsage(tables);
+
+    expect(usage.needsError).toBe(true);
+    expect(usage.needsSimpleLookup).toBe(true);
+    expect(usage.needsCompositeLookup).toBe(false);
+  });
+
+  it("returns needsCompositeLookup=true for composite index", () => {
+    const tables = [analyzeTable(compositeIndexSchema.posts)];
+    const usage = analyzeRuntimeUsage(tables);
+
+    expect(usage.needsError).toBe(true);
+    expect(usage.needsSimpleLookup).toBe(true); // has single-column PK
+    expect(usage.needsCompositeLookup).toBe(true);
+  });
+
+  it("returns needsSimpleLookup=false for non-unique single-column index", () => {
+    const tables = [analyzeTable(nonUniqueIndexSchema.posts)];
+    const usage = analyzeRuntimeUsage(tables);
+
+    expect(usage.needsError).toBe(true);
+    expect(usage.needsSimpleLookup).toBe(true); // has single-column PK
+    expect(usage.needsCompositeLookup).toBe(false);
+  });
+
+  it("handles empty tables array", () => {
+    const usage = analyzeRuntimeUsage([]);
+
+    expect(usage.needsError).toBe(true);
+    expect(usage.needsSimpleLookup).toBe(false);
+    expect(usage.needsCompositeLookup).toBe(false);
+  });
+});
+
+describe("generateRuntimeFile", () => {
+  const defaultSchemaImport = "../schema.js";
+
+  it("generates minimal runtime with only error class when no helpers needed", () => {
+    const usage: RuntimeUsage = {
+      needsError: true,
+      needsSimpleLookup: false,
+      needsCompositeLookup: false,
+    };
+    const code = generateRuntimeFile({
+      usage,
+      schemaImport: defaultSchemaImport,
+    });
+
+    expect(code).toContain("class DrizzleLoaderNotFound extends Error");
+    expect(code).toContain("export type DrizzleDb");
+    expect(code).not.toContain("buildLookupMap");
+    expect(code).not.toContain("lookupOrError");
+    expect(code).not.toContain("serializeCompositeKey");
+    expect(code).not.toContain("queryCompositeKey");
+  });
+
+  it("generates simple lookup helpers when needsSimpleLookup=true", () => {
+    const usage: RuntimeUsage = {
+      needsError: true,
+      needsSimpleLookup: true,
+      needsCompositeLookup: false,
+    };
+    const code = generateRuntimeFile({
+      usage,
+      schemaImport: defaultSchemaImport,
+    });
+
+    expect(code).toContain("class DrizzleLoaderNotFound extends Error");
+    expect(code).toContain("export function buildLookupMap");
+    expect(code).toContain("export function lookupOrError");
+    expect(code).not.toContain("serializeCompositeKey");
+    expect(code).not.toContain("queryCompositeKey");
+  });
+
+  it("generates composite lookup helpers when needsCompositeLookup=true", () => {
+    const usage: RuntimeUsage = {
+      needsError: true,
+      needsSimpleLookup: false,
+      needsCompositeLookup: true,
+    };
+    const code = generateRuntimeFile({
+      usage,
+      schemaImport: defaultSchemaImport,
+    });
+
+    expect(code).toContain("class DrizzleLoaderNotFound extends Error");
+    expect(code).toContain("export function serializeCompositeKey");
+    expect(code).toContain("export function buildCompositeLookupMap");
+    expect(code).toContain("export async function queryCompositeKey");
+    expect(code).toContain('from "drizzle-orm"');
+  });
+
+  it("generates all helpers when both are needed", () => {
+    const usage: RuntimeUsage = {
+      needsError: true,
+      needsSimpleLookup: true,
+      needsCompositeLookup: true,
+    };
+    const code = generateRuntimeFile({
+      usage,
+      schemaImport: defaultSchemaImport,
+    });
+
+    expect(code).toContain("class DrizzleLoaderNotFound extends Error");
+    expect(code).toContain("export function buildLookupMap");
+    expect(code).toContain("export function lookupOrError");
+    expect(code).toContain("export function serializeCompositeKey");
+    expect(code).toContain("export function buildCompositeLookupMap");
+    expect(code).toContain("export async function queryCompositeKey");
+    expect(code).toContain('from "drizzle-orm"');
+  });
+
+  it("includes DO NOT EDIT header", () => {
+    const usage: RuntimeUsage = {
+      needsError: true,
+      needsSimpleLookup: false,
+      needsCompositeLookup: false,
+    };
+    const code = generateRuntimeFile({
+      usage,
+      schemaImport: defaultSchemaImport,
+    });
+
+    expect(code).toContain(
+      "// This file is auto-generated by drizzleloader. DO NOT EDIT.",
+    );
+  });
+});
