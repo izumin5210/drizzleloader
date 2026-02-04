@@ -1,5 +1,8 @@
 # drizzleloader
 
+[![npm](https://img.shields.io/npm/v/drizzleloader?logo=npm&labelColor=313244&color=CB3837)](https://www.npmjs.com/package/drizzleloader)
+[![License](https://img.shields.io/github/license/izumin5210/drizzleloader?labelColor=%23313244&color=%23a6e3a1)](./LICENSE)
+
 Generate [DataLoader](https://github.com/graphql/dataloader) instances from [Drizzle ORM](https://orm.drizzle.team/) schema definitions.
 
 Eliminates boilerplate code for implementing data-loading patterns in GraphQL applications.
