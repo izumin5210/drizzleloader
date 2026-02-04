@@ -29,7 +29,7 @@ describe("CLI generate command (built)", () => {
 
     expect(existsSync(`${outputDir}/drizzleloaders.ts`)).toBe(true);
     expect(existsSync(`${outputDir}/drizzleloaders/users.ts`)).toBe(true);
-    expect(existsSync(`${outputDir}/drizzleloaders/_internal.ts`)).toBe(true);
+    expect(existsSync(`${outputDir}/drizzleloaders/_runtime.ts`)).toBe(true);
 
     const entryContent = readFileSync(
       `${outputDir}/drizzleloaders.ts`,
