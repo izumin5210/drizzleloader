@@ -6,16 +6,24 @@
   "bin": {
     "drizzleloader": "./dist/index.js"
   },
-  "scripts": {
-    "build": "tsc",
-    "check": "biome check --write",
-    "knip": "knip --fix",
-    "test": "vitest --exclude 'src/__tests__/integration/**'",
-    "test:integration": "vitest src/__tests__/integration",
-    "test:all": "vitest",
-    "changeset:version": "changeset version",
-    "changeset:release": "pnpm build && changeset publish"
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
+  "files": [
+    "dist",
+    "docs",
+    "src",
+    "!**/__tests__/**",
+    "!**/*.test.ts",
+    "!**/*.test.js",
+    "!**/*.test.d.ts",
+    "!**/*.test.js.map",
+    "!**/*.test.d.ts.map",
+    "!docs/plans"
+  ],
   "keywords": [
     "drizzle",
     "drizzle-orm",
@@ -30,6 +38,16 @@
   },
   "bugs": {
     "url": "https://github.com/izumin5210/drizzleloader/issues"
+  },
+  "scripts": {
+    "build": "tsc",
+    "check": "biome check --write",
+    "knip": "knip --fix",
+    "test": "vitest --exclude 'src/__tests__/integration/**'",
+    "test:integration": "vitest src/__tests__/integration",
+    "test:all": "vitest",
+    "changeset:version": "changeset version",
+    "changeset:release": "pnpm build && changeset publish"
   },
   "packageManager": "pnpm@10.28.2",
   "devDependencies": {
