@@ -24,7 +24,7 @@ function isIndexedColumn(val: unknown): val is IndexedColumn {
   return val !== null && typeof val === "object" && "name" in val;
 }
 
-export function analyzeTable(table: Table): AnalyzedTable {
+export function analyzeTable(table: Table, varName: string): AnalyzedTable {
   const config = getTableConfig(table as PgTable);
 
   const columnByName = new Map(config.columns.map((col) => [col.name, col]));
@@ -85,6 +85,7 @@ export function analyzeTable(table: Table): AnalyzedTable {
 
   return {
     name: config.name,
+    varName,
     table,
     primaryKey,
     indexes,

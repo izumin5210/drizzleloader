@@ -11,7 +11,7 @@ import {
 
 describe("analyzeRuntimeUsage", () => {
   it("returns needsSimpleLookup=true for single-column primary key", () => {
-    const tables = [analyzeTable(basicPkSchema.users)];
+    const tables = [analyzeTable(basicPkSchema.users, "users")];
     const usage = analyzeRuntimeUsage(tables);
 
     expect(usage.needsError).toBe(true);
@@ -20,7 +20,7 @@ describe("analyzeRuntimeUsage", () => {
   });
 
   it("returns needsCompositeLookup=true for composite index", () => {
-    const tables = [analyzeTable(compositeIndexSchema.posts)];
+    const tables = [analyzeTable(compositeIndexSchema.posts, "posts")];
     const usage = analyzeRuntimeUsage(tables);
 
     expect(usage.needsError).toBe(true);
@@ -29,7 +29,7 @@ describe("analyzeRuntimeUsage", () => {
   });
 
   it("returns needsSimpleLookup=false for non-unique single-column index", () => {
-    const tables = [analyzeTable(nonUniqueIndexSchema.posts)];
+    const tables = [analyzeTable(nonUniqueIndexSchema.posts, "posts")];
     const usage = analyzeRuntimeUsage(tables);
 
     expect(usage.needsError).toBe(true);

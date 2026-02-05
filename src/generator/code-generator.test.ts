@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as basicPkSchema from "../__tests__/golden/basic-pk/schema.js";
+import * as camelCaseVarNameSchema from "../__tests__/golden/camel-case-var-name/schema.js";
 import * as compositeIndexSchema from "../__tests__/golden/composite-index/schema.js";
 import * as compositePkSchema from "../__tests__/golden/composite-pk/schema.js";
 import * as compositeUniqueIndexSchema from "../__tests__/golden/composite-unique-index/schema.js";
@@ -17,7 +18,7 @@ import {
 
 describe("generateMultiFileOutput golden tests", () => {
   it("generates loader files for basic primary key", async () => {
-    const tables = [analyzeTable(basicPkSchema.users)];
+    const tables = [analyzeTable(basicPkSchema.users, "users")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -35,7 +36,7 @@ describe("generateMultiFileOutput golden tests", () => {
   });
 
   it("generates loader files for uuid primary key", async () => {
-    const tables = [analyzeTable(uuidPkSchema.items)];
+    const tables = [analyzeTable(uuidPkSchema.items, "items")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -53,7 +54,7 @@ describe("generateMultiFileOutput golden tests", () => {
   });
 
   it("generates loader files for unique index", async () => {
-    const tables = [analyzeTable(uniqueIndexSchema.users)];
+    const tables = [analyzeTable(uniqueIndexSchema.users, "users")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -71,7 +72,7 @@ describe("generateMultiFileOutput golden tests", () => {
   });
 
   it("generates loader files for non-unique index", async () => {
-    const tables = [analyzeTable(nonUniqueIndexSchema.posts)];
+    const tables = [analyzeTable(nonUniqueIndexSchema.posts, "posts")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -89,7 +90,7 @@ describe("generateMultiFileOutput golden tests", () => {
   });
 
   it("generates loader files for multiple indexes", async () => {
-    const tables = [analyzeTable(multipleIndexesSchema.posts)];
+    const tables = [analyzeTable(multipleIndexesSchema.posts, "posts")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -108,8 +109,8 @@ describe("generateMultiFileOutput golden tests", () => {
 
   it("generates loader files for multiple tables", async () => {
     const tables = [
-      analyzeTable(multipleTablesSchema.users),
-      analyzeTable(multipleTablesSchema.posts),
+      analyzeTable(multipleTablesSchema.users, "users"),
+      analyzeTable(multipleTablesSchema.posts, "posts"),
     ];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
@@ -131,7 +132,7 @@ describe("generateMultiFileOutput golden tests", () => {
   });
 
   it("generates loader files for composite index", async () => {
-    const tables = [analyzeTable(compositeIndexSchema.posts)];
+    const tables = [analyzeTable(compositeIndexSchema.posts, "posts")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -149,7 +150,7 @@ describe("generateMultiFileOutput golden tests", () => {
   });
 
   it("generates loader files for composite unique index", async () => {
-    const tables = [analyzeTable(compositeUniqueIndexSchema.posts)];
+    const tables = [analyzeTable(compositeUniqueIndexSchema.posts, "posts")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -167,7 +168,7 @@ describe("generateMultiFileOutput golden tests", () => {
   });
 
   it("generates loader files for composite primary key", async () => {
-    const tables = [analyzeTable(compositePkSchema.user_roles)];
+    const tables = [analyzeTable(compositePkSchema.user_roles, "user_roles")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -183,11 +184,31 @@ describe("generateMultiFileOutput golden tests", () => {
       "../__tests__/golden/composite-pk/drizzleloaders/userRoles.ts",
     );
   });
+
+  it("generates loader files for camelCase variable with snake_case table name", async () => {
+    const tables = [
+      analyzeTable(camelCaseVarNameSchema.userRoles, "userRoles"),
+    ];
+    const files = generateMultiFileOutput(tables, {
+      schemaImport: "./schema.js",
+      importExtension: ".js",
+    });
+
+    await expect(files.get("drizzleloaders.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/camel-case-var-name/drizzleloaders.ts",
+    );
+    await expect(files.get("drizzleloaders/_runtime.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/camel-case-var-name/drizzleloaders/_runtime.ts",
+    );
+    await expect(files.get("drizzleloaders/userRoles.ts")).toMatchFileSnapshot(
+      "../__tests__/golden/camel-case-var-name/drizzleloaders/userRoles.ts",
+    );
+  });
 });
 
 describe("generateTableFile", () => {
   it("generates table loader file with imports from runtime", () => {
-    const table = analyzeTable(basicPkSchema.users);
+    const table = analyzeTable(basicPkSchema.users, "users");
     const code = generateTableFile(table, {
       schemaImport: "../../schema.js",
       runtimeImport: "./_runtime.js",
@@ -202,7 +223,7 @@ describe("generateTableFile", () => {
   });
 
   it("generates unique loader using buildLookupMap and lookupOrError", () => {
-    const table = analyzeTable(basicPkSchema.users);
+    const table = analyzeTable(basicPkSchema.users, "users");
     const code = generateTableFile(table, {
       schemaImport: "../../schema.js",
       runtimeImport: "./_runtime.js",
@@ -214,7 +235,7 @@ describe("generateTableFile", () => {
 
 describe("generateEntryPointFile", () => {
   it("generates entry point that imports table loaders and re-exports error from runtime", () => {
-    const tables = [analyzeTable(basicPkSchema.users)];
+    const tables = [analyzeTable(basicPkSchema.users, "users")];
     const code = generateEntryPointFile(tables, {
       tableImportPrefix: "./drizzleloaders/",
       importExtension: ".js",
@@ -231,8 +252,8 @@ describe("generateEntryPointFile", () => {
 
   it("generates entry point for multiple tables", () => {
     const tables = [
-      analyzeTable(multipleTablesSchema.users),
-      analyzeTable(multipleTablesSchema.posts),
+      analyzeTable(multipleTablesSchema.users, "users"),
+      analyzeTable(multipleTablesSchema.posts, "posts"),
     ];
     const code = generateEntryPointFile(tables, {
       tableImportPrefix: "./drizzleloaders/",
@@ -250,7 +271,7 @@ describe("generateEntryPointFile", () => {
   });
 
   it("converts snake_case table names to camelCase for file imports", () => {
-    const tables = [analyzeTable(multipleIndexesSchema.posts)];
+    const tables = [analyzeTable(multipleIndexesSchema.posts, "posts")];
     const code = generateEntryPointFile(tables, {
       tableImportPrefix: "./drizzleloaders/",
       importExtension: ".js",
@@ -262,7 +283,7 @@ describe("generateEntryPointFile", () => {
 
 describe("generateMultiFileOutput", () => {
   it("returns Map with all generated files including runtime", () => {
-    const tables = [analyzeTable(basicPkSchema.users)];
+    const tables = [analyzeTable(basicPkSchema.users, "users")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -274,7 +295,7 @@ describe("generateMultiFileOutput", () => {
   });
 
   it("generates runtime file with necessary helpers", () => {
-    const tables = [analyzeTable(basicPkSchema.users)];
+    const tables = [analyzeTable(basicPkSchema.users, "users")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -288,7 +309,7 @@ describe("generateMultiFileOutput", () => {
   });
 
   it("generates runtime file with composite helpers when needed", () => {
-    const tables = [analyzeTable(compositeIndexSchema.posts)];
+    const tables = [analyzeTable(compositeIndexSchema.posts, "posts")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -302,7 +323,7 @@ describe("generateMultiFileOutput", () => {
   });
 
   it("adjusts schema import path for files inside drizzleloaders directory", () => {
-    const tables = [analyzeTable(basicPkSchema.users)];
+    const tables = [analyzeTable(basicPkSchema.users, "users")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
       importExtension: ".js",
@@ -319,8 +340,8 @@ describe("generateMultiFileOutput", () => {
 
   it("generates files for multiple tables", () => {
     const tables = [
-      analyzeTable(multipleTablesSchema.users),
-      analyzeTable(multipleTablesSchema.posts),
+      analyzeTable(multipleTablesSchema.users, "users"),
+      analyzeTable(multipleTablesSchema.posts, "posts"),
     ];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "./schema.js",
@@ -334,7 +355,7 @@ describe("generateMultiFileOutput", () => {
   });
 
   it("handles parent directory schema imports", () => {
-    const tables = [analyzeTable(basicPkSchema.users)];
+    const tables = [analyzeTable(basicPkSchema.users, "users")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "../db/schema.js",
       importExtension: ".js",
@@ -347,7 +368,7 @@ describe("generateMultiFileOutput", () => {
   });
 
   it("preserves package imports without modification", () => {
-    const tables = [analyzeTable(basicPkSchema.users)];
+    const tables = [analyzeTable(basicPkSchema.users, "users")];
     const files = generateMultiFileOutput(tables, {
       schemaImport: "@myapp/db/schema",
       importExtension: ".js",

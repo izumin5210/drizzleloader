@@ -44,7 +44,12 @@ Options:
   -h, --help                    Show this help message`);
 }
 
-async function loadSchema(schemaPath: string): Promise<Table[]> {
+interface LoadedTable {
+  varName: string;
+  table: Table;
+}
+
+async function loadSchema(schemaPath: string): Promise<LoadedTable[]> {
   const jiti = createJiti(import.meta.url, {
     moduleCache: false,
   });
@@ -52,10 +57,12 @@ async function loadSchema(schemaPath: string): Promise<Table[]> {
   const absolutePath = resolve(process.cwd(), schemaPath);
   const module = await jiti.import(absolutePath);
 
-  const tables: Table[] = [];
-  for (const [, value] of Object.entries(module as Record<string, unknown>)) {
+  const tables: LoadedTable[] = [];
+  for (const [varName, value] of Object.entries(
+    module as Record<string, unknown>,
+  )) {
     if (is(value, PgTable)) {
-      tables.push(value as Table);
+      tables.push({ varName, table: value as Table });
     }
   }
 
@@ -69,14 +76,16 @@ interface GenerateOptions {
 }
 
 async function generate(options: GenerateOptions): Promise<void> {
-  const tables = await loadSchema(options.schema);
+  const loadedTables = await loadSchema(options.schema);
 
-  if (tables.length === 0) {
+  if (loadedTables.length === 0) {
     console.error("No tables found in schema file");
     process.exit(1);
   }
 
-  const analyzedTables = tables.map((table) => analyzeTable(table));
+  const analyzedTables = loadedTables.map(({ varName, table }) =>
+    analyzeTable(table, varName),
+  );
 
   // Compute schema import relative to the entry point (drizzleloaders.ts)
   const entryPointPath = join(options.outputDir, "drizzleloaders.ts");
@@ -103,7 +112,7 @@ async function generate(options: GenerateOptions): Promise<void> {
   }
 
   console.log(
-    `Generated loaders for ${tables.length} table(s) in ${options.outputDir}/`,
+    `Generated loaders for ${loadedTables.length} table(s) in ${options.outputDir}/`,
   );
 }
 

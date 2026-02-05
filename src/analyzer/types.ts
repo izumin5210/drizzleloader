@@ -18,6 +18,7 @@ export interface AnalyzedIndex {
 
 export interface AnalyzedTable {
   name: string;
+  varName: string;
   table: Table;
   primaryKey: AnalyzedPrimaryKey | null;
   indexes: AnalyzedIndex[];
