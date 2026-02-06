@@ -24,22 +24,23 @@ function generateUniqueLoader(
 ): string {
   const loaderName = `by${toPascalCase(columnName)}`;
   const keysVar = `${toCamelCase(columnName)}s`;
+  const varName = table.varName;
   const tableName = table.name;
   const columnCamel = toCamelCase(columnName);
 
   if (options.useHelpers) {
-    return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof __schema.${tableName}>>(
+    return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof __schema.${varName}>>(
   async (${keysVar}) => {
-    const rows = await db.select().from(__schema.${tableName}).where(inArray(__schema.${tableName}.${columnCamel}, [...${keysVar}]));
+    const rows = await db.select().from(__schema.${varName}).where(inArray(__schema.${varName}.${columnCamel}, [...${keysVar}]));
     const map = buildLookupMap(rows, (row) => row.${columnCamel});
     return ${keysVar}.map((key) => lookupOrError(map, key, "${tableName}", "${columnName}"));
   }
 );`;
   }
 
-  return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof __schema.${tableName}>>(
+  return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof __schema.${varName}>>(
   async (${keysVar}) => {
-    const rows = await db.select().from(__schema.${tableName}).where(inArray(__schema.${tableName}.${columnCamel}, [...${keysVar}]));
+    const rows = await db.select().from(__schema.${varName}).where(inArray(__schema.${varName}.${columnCamel}, [...${keysVar}]));
     const map = new Map(rows.map((row) => [row.${columnCamel}, row]));
     return ${keysVar}.map((key) => map.get(key) ?? new DrizzleLoaderNotFound({ table: "${tableName}", columns: [{ ${columnName}: key }] }));
   }
@@ -53,13 +54,13 @@ function generateNonUniqueLoader(
 ): string {
   const loaderName = `by${toPascalCase(columnName)}`;
   const keysVar = `${toCamelCase(columnName)}s`;
-  const tableName = table.name;
+  const varName = table.varName;
   const columnCamel = toCamelCase(columnName);
 
-  return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof __schema.${tableName}>[]>(
+  return `const ${loaderName} = new DataLoader<${tsType}, InferSelectModel<typeof __schema.${varName}>[]>(
   async (${keysVar}) => {
-    const rows = await db.select().from(__schema.${tableName}).where(inArray(__schema.${tableName}.${columnCamel}, [...${keysVar}]));
-    const map = new Map<${tsType}, InferSelectModel<typeof __schema.${tableName}>[]>();
+    const rows = await db.select().from(__schema.${varName}).where(inArray(__schema.${varName}.${columnCamel}, [...${keysVar}]));
+    const map = new Map<${tsType}, InferSelectModel<typeof __schema.${varName}>[]>();
     for (const row of rows) {
       const existing = map.get(row.${columnCamel}) ?? [];
       existing.push(row);
@@ -75,7 +76,7 @@ function generateCompositeNonUniqueLoader(
   columns: AnalyzedColumn[],
 ): string {
   const loaderName = toCompositeLoaderName(columns.map((c) => c.name));
-  const tableName = table.name;
+  const varName = table.varName;
 
   // Build key type: { authorId: number; category: string }
   const keyTypeFields = columns
@@ -90,12 +91,12 @@ function generateCompositeNonUniqueLoader(
 
   // Build column accessors for query
   const columnAccessors = columns
-    .map((c) => `__schema.${tableName}.${toCamelCase(c.name)}`)
+    .map((c) => `__schema.${varName}.${toCamelCase(c.name)}`)
     .join(", ");
 
-  return `const ${loaderName} = new DataLoader<${keyType}, InferSelectModel<typeof __schema.${tableName}>[], string>(
+  return `const ${loaderName} = new DataLoader<${keyType}, InferSelectModel<typeof __schema.${varName}>[], string>(
   async (keys) => {
-    const rows = await queryCompositeKey(db, __schema.${tableName}, [${columnAccessors}], [${columnNames}], keys as readonly Record<string, unknown>[]);
+    const rows = await queryCompositeKey(db, __schema.${varName}, [${columnAccessors}], [${columnNames}], keys as readonly Record<string, unknown>[]);
     const map = buildCompositeLookupMap(rows, [${columnNames}] as const);
     return keys.map((key) => map.get(serializeCompositeKey(key, [${columnNames}] as const)) ?? []);
   },
@@ -108,6 +109,7 @@ function generateCompositeUniqueLoader(
   columns: AnalyzedColumn[],
 ): string {
   const loaderName = toCompositeLoaderName(columns.map((c) => c.name));
+  const varName = table.varName;
   const tableName = table.name;
 
   const keyTypeFields = columns
@@ -120,16 +122,16 @@ function generateCompositeUniqueLoader(
     .join(", ");
 
   const columnAccessors = columns
-    .map((c) => `__schema.${tableName}.${toCamelCase(c.name)}`)
+    .map((c) => `__schema.${varName}.${toCamelCase(c.name)}`)
     .join(", ");
 
   const errorColumns = `{ ${columns
     .map((col) => `${col.name}: key.${toCamelCase(col.name)}`)
     .join(", ")} }`;
 
-  return `const ${loaderName} = new DataLoader<${keyType}, InferSelectModel<typeof __schema.${tableName}>, string>(
+  return `const ${loaderName} = new DataLoader<${keyType}, InferSelectModel<typeof __schema.${varName}>, string>(
   async (keys) => {
-    const rows = await queryCompositeKey(db, __schema.${tableName}, [${columnAccessors}], [${columnNames}], keys as readonly Record<string, unknown>[]);
+    const rows = await queryCompositeKey(db, __schema.${varName}, [${columnAccessors}], [${columnNames}], keys as readonly Record<string, unknown>[]);
     const map = buildCompositeLookupMap(rows, [${columnNames}] as const);
     return keys.map((key) => {
       const found = map.get(serializeCompositeKey(key, [${columnNames}] as const))?.[0];
@@ -215,7 +217,7 @@ function hasCompositeIndexes(table: AnalyzedTable): boolean {
 }
 
 function generateTableLoaderFunctionExported(table: AnalyzedTable): string {
-  const tablePascal = toPascalCase(table.name);
+  const tablePascal = toPascalCase(table.varName);
   const lines: string[] = [];
 
   lines.push(`export function create${tablePascal}Loaders(db: DrizzleDb) {`);
@@ -289,8 +291,8 @@ export function generateEntryPointFile(
   // Generate imports for each table's loader function
   const tableImports = tables
     .map((t) => {
-      const fnName = `create${toPascalCase(t.name)}Loaders`;
-      const fileName = toCamelCase(t.name);
+      const fnName = `create${toPascalCase(t.varName)}Loaders`;
+      const fileName = toCamelCase(t.varName);
       return `import { ${fnName} } from "${options.tableImportPrefix}${fileName}${ext}";`;
     })
     .join("\n");
@@ -320,8 +322,8 @@ function generateEntryPointFactory(tables: AnalyzedTable[]): string {
   lines.push("  return {");
 
   for (const table of tables) {
-    const tablePascal = toPascalCase(table.name);
-    lines.push(`    ${table.name}: create${tablePascal}Loaders(db),`);
+    const tablePascal = toPascalCase(table.varName);
+    lines.push(`    ${table.varName}: create${tablePascal}Loaders(db),`);
   }
 
   lines.push("  };");
@@ -359,7 +361,7 @@ export function generateMultiFileOutput(
 
   // Per-table files
   for (const table of tables) {
-    const fileName = `drizzleloaders/${toCamelCase(table.name)}.ts`;
+    const fileName = `drizzleloaders/${toCamelCase(table.varName)}.ts`;
     const tableSchemaImport = adjustSchemaImportPath(options.schemaImport);
     files.set(
       fileName,

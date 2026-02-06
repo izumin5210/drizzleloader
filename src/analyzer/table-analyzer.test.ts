@@ -22,9 +22,10 @@ describe("analyzeTable", () => {
         name: text("name"),
       });
 
-      const result = analyzeTable(users);
+      const result = analyzeTable(users, "users");
 
       expect(result.name).toBe("users");
+      expect(result.varName).toBe("users");
       expect(result.primaryKey).not.toBeNull();
       expect(result.primaryKey?.columns[0]?.name).toBe("id");
       expect(result.primaryKey?.columns[0]?.tsType).toBe("number");
@@ -40,7 +41,7 @@ describe("analyzeTable", () => {
         (t) => [t.userId, t.roleId],
       );
 
-      const result = analyzeTable(userRoles);
+      const result = analyzeTable(userRoles, "userRoles");
 
       // The inline syntax (t) => [t.userId, t.roleId] creates columns, not a primaryKey
       // Use primaryKey({ columns: [...] }) for composite primary keys
@@ -53,7 +54,7 @@ describe("analyzeTable", () => {
         level: text("level"),
       });
 
-      const result = analyzeTable(logs);
+      const result = analyzeTable(logs, "logs");
 
       expect(result.primaryKey).toBeNull();
     });
@@ -68,7 +69,7 @@ describe("analyzeTable", () => {
         (t) => [primaryKey({ columns: [t.userId, t.roleId] })],
       );
 
-      const result = analyzeTable(userRoles);
+      const result = analyzeTable(userRoles, "userRoles");
 
       expect(result.primaryKey).not.toBeNull();
       expect(result.primaryKey?.columns).toHaveLength(2);
@@ -88,7 +89,7 @@ describe("analyzeTable", () => {
         (t) => [uniqueIndex("users_email_idx").on(t.email)],
       );
 
-      const result = analyzeTable(users);
+      const result = analyzeTable(users, "users");
 
       expect(result.indexes).toHaveLength(1);
       expect(result.indexes[0]?.name).toBe("users_email_idx");
@@ -107,7 +108,7 @@ describe("analyzeTable", () => {
         (t) => [index("posts_author_id_idx").on(t.authorId)],
       );
 
-      const result = analyzeTable(posts);
+      const result = analyzeTable(posts, "posts");
 
       expect(result.indexes).toHaveLength(1);
       expect(result.indexes[0]?.name).toBe("posts_author_id_idx");
@@ -131,7 +132,7 @@ describe("analyzeTable", () => {
         ],
       );
 
-      const result = analyzeTable(posts);
+      const result = analyzeTable(posts, "posts");
 
       expect(result.indexes).toHaveLength(3);
 
@@ -165,7 +166,7 @@ describe("analyzeTable", () => {
         (t) => [index("posts_composite_idx").on(t.authorId, t.category)],
       );
 
-      const result = analyzeTable(posts);
+      const result = analyzeTable(posts, "posts");
 
       expect(result.indexes).toHaveLength(1);
       expect(result.indexes[0]?.columns).toHaveLength(2);
@@ -182,7 +183,7 @@ describe("analyzeTable", () => {
         (t) => [index("posts_author_category_idx").on(t.authorId, t.category)],
       );
 
-      const result = analyzeTable(posts);
+      const result = analyzeTable(posts, "posts");
 
       expect(result.indexes).toHaveLength(1);
       expect(result.indexes[0]?.name).toBe("posts_author_category_idx");
@@ -209,7 +210,7 @@ describe("analyzeTable", () => {
         ],
       );
 
-      const result = analyzeTable(users);
+      const result = analyzeTable(users, "users");
 
       expect(result.indexes).toHaveLength(0);
     });
@@ -224,7 +225,7 @@ describe("analyzeTable", () => {
         (t) => [uniqueIndex("items_external_id_idx").on(t.externalId)],
       );
 
-      const result = analyzeTable(items);
+      const result = analyzeTable(items, "items");
 
       expect(result.indexes).toHaveLength(1);
       expect(result.indexes[0]?.columns[0]?.tsType).toBe("bigint");
