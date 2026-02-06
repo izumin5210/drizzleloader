@@ -1,5 +1,11 @@
 # drizzleloader
 
+## 0.2.1
+
+### Patch Changes
+
+- [#15](https://github.com/izumin5210/drizzleloader/pull/15) [`1bd56ec`](https://github.com/izumin5210/drizzleloader/commit/1bd56ecfe8816f8143fe9335b0537c40b1187a2c) Thanks [@izumin5210](https://github.com/izumin5210)! - fix: use JavaScript variable name instead of SQL table name for schema access
+
 ## 0.2.0
 
 ### Minor Changes
